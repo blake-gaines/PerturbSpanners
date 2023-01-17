@@ -2,4 +2,5 @@ data/
 *.out
 *.log
 *.pkl
+*.csv
 __pycache__/

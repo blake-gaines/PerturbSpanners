@@ -3,21 +3,22 @@ from DataSets import DataSets
 import networkx as nx
 from data import get_graph
 import numpy as np
-from general_attack import attack, PathSelector
+from general_attack import attack
+from path_selectors import *
 import random
 from itertools import product
 from utils import *
+from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
 
 weighted = False
 
 path_selectors = [
-    PathSelector("Ours", nx.shortest_simple_paths, update_every_iteration=False, weight="weight"),
-    PathSelector("Theirs", nx.shortest_simple_paths, update_every_iteration=True, weight="weight"),
-    # PathSelector("One Sided Random", random_one_sided, update_every_iteration=False, weight="weight"),
-    # PathSelector("Static Random", random_paths, update_every_iteration=False, weight="weight"),
-    # PathSelector("Dynamic Random", random_paths, update_every_iteration=False, weight="weight"),
+    SinglePairPathSelector("Ours", nx.shortest_simple_paths, update_every_iteration=False, weight="weight"),
+    SinglePairPathSelector("Theirs", nx.shortest_simple_paths, update_every_iteration=True, weight="weight"),
+    # SinglePairPathSelector("One Sided Random", random_one_sided, update_every_iteration=False, weight="weight"),
+    # SinglePairPathSelector("Random Paths", random_paths, update_every_iteration=False, weight="weight"),
 ]
 
 
@@ -46,44 +47,45 @@ if __name__ == "__main__":
             node_pairs.append((a,b))
     print("Node Pairs:", node_pairs)
 
-
-
-    epsilon = 1
     n_trials = 1
 
+    hyperparameter_ranges = dict(
+        epsilon = [1],
+        k = [2],
+    )
+
     configuration_ranges = dict(
+        perturbation_function = [pathattack],
+        path_selector = path_selectors,
         node_pair = node_pairs,
         k = [2,3],
         global_budget = [1000],
-        local_budget = [5,6,7],
-        top_k = [1, 50],
+        local_budget = [100],
+        top_k = [1],
     )
-    print(configuration_ranges)
 
     results = []
 
     for trial_number in range(n_trials):
-        for iteration, config_values in enumerate(tqdm(product(*configuration_ranges.values()))):
-            config = dict(zip(configuration_ranges.keys(), config_values))
-            print("\n========\nConfig:", config)
+        for hyperparameter_values in tqdm(product(*hyperparameter_ranges.values()), position=1):
+            for config_values in tqdm(product(*configuration_ranges.values()), position=1):
+                config = dict(zip(configuration_ranges.keys(), config_values))
+                print("\n========\nConfig:", config)
 
-            source, target = config["node_pair"]
-            original_path_length = nx.shortest_path_length(G, source, target, weight="weight")
-            goal = original_path_length * config["k"] + epsilon
-            # print(f"Original Path Length: {original_path_length} | Goal: {goal}")
+                source, target = config["node_pair"]
+                original_path_length = nx.shortest_path_length(G, source, target, weight="weight")
+                goal = original_path_length * hyperparameter_values["k"] + hyperparameter_values["epsilon"]
+                # print(f"Original Path Length: {original_path_length} | Goal: {goal}")
 
-            for path_selector in path_selectors:
+                path_selector = config["path_selector"]
                 print("Selector:", path_selector.name)
                 if "Random" in path_selector.name:
                     path_selector.generator_function_kwargs["goal"] = goal
 
                 start_time = time.time()
-                perturbations, stats_dict = attack(G, source, target, goal, path_selector, config["global_budget"], config["local_budget"], top_k=config["top_k"], max_iterations=100)
+                perturbations, stats_dict = attack(G, max_iterations=500, **config)
                 perturbations = {k:v for k,v in perturbations.items() if v != 0}
                 time_taken = time.time() - start_time
-
-                if perturbations is None:
-                    print("No solution found")
 
                 # print("Cost: ", sum(perturbations.values()))
 
@@ -97,7 +99,7 @@ if __name__ == "__main__":
                     "Epsilon": epsilon,
                     "Goal": goal,
                     **config,
-                    **(stats_dict if stats_dict is not None else dict())
+                    **stats_dict
                 })
                 print()
     
