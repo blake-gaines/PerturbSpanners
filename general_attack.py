@@ -2,17 +2,20 @@ from tqdm import tqdm
 import time
 
 # Make every path between s and t have length of at least goal
-def attack(G, selector, perturbation_function, global_budget, local_budget, goal=float("inf"), max_iterations=500):
+def attack(G, path_selector, perturbation_function, goal, global_budget, local_budget, max_iterations=500):
     paths = set()
     all_path_edges = set()
 
     add_times = []
     perturb_times = []
 
+    current_distance = path_selector.distance(G)
+
     pbar = tqdm(range(max_iterations), position=1)
     for i in pbar:
+            print("Adding")
             add_start_time = time.time()
-            new_paths = next(selector, None)
+            new_paths = next(path_selector, None)
             if not new_paths:
                 break
             else:
@@ -21,8 +24,9 @@ def attack(G, selector, perturbation_function, global_budget, local_budget, goal
                     all_path_edges.update(zip(new_path[:-1], new_path[1:]))
             add_times.append(time.time() - add_start_time)
 
+            print("Perturbing")
             perturb_start_time = time.time()
-            perturbation_dict = perturbation_function(G, paths, all_path_edges, global_budget, local_budget)
+            perturbation_dict = perturbation_function(G, paths, all_path_edges, goal, global_budget, local_budget)
             perturb_times.append(time.time() - perturb_start_time)
 
             if not perturbation_dict:
@@ -32,14 +36,14 @@ def attack(G, selector, perturbation_function, global_budget, local_budget, goal
             for edge, perturbation in perturbation_dict.items():
                 G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
 
-            current_distance = selector.get_current_distance(G_prime)
-            pbar.set_description(f"    Current Distance: {current_distance} ")
+            current_distance = path_selector.distance(G_prime)
+            pbar.set_description(f"    Current Distance: {current_distance} | Goal: {goal}")
             
             if current_distance >= goal:
                 break
 
-            if selector.update_every_iteration:
-                selector.update_graph(G_prime)
+            if path_selector.update_every_iteration:
+                path_selector.update_graph(G_prime)
 
     stats_dict = {
         "Number of Paths": len(paths),

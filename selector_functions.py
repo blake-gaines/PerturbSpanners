@@ -22,6 +22,14 @@ def get_P_graph(G, goal, dist_from_s, dist_to_t):
 
     return G.edge_subgraph(selected_edges)
 
+def restrict_graph(G, source, target, goal, weight="weight"):
+    dist_from_s, _ = nx.single_source_dijkstra(G, source, cutoff=goal, weight=weight)
+    dist_to_t, _ = nx.single_source_dijkstra(G.reverse(), target, cutoff=goal, weight=weight)
+
+    P_Graph = get_P_graph(G, goal, dist_from_s, dist_to_t)
+
+    return dist_from_s, dist_to_t, P_Graph
+
 # Select random path between s and t from the P graph through (a,b) by randomly walking backwards and forwards
 def select_random_path(G, source, target, node_pair, dist_from_s, dist_to_t, max_path_length, counts):
     a, b = node_pair
@@ -60,26 +68,45 @@ def select_random_path(G, source, target, node_pair, dist_from_s, dist_to_t, max
     return path
 
 def random_paths(G, source, target, goal, weight="weight"):
-    dist_from_s, _ = nx.single_source_dijkstra(G, source, cutoff=goal, weight=weight)
-    dist_to_t, _ = nx.single_source_dijkstra(G.reverse(), target, cutoff=goal, weight=weight)
-
-    P_Graph = get_P_graph(G, goal, dist_from_s, dist_to_t)
+    dist_from_s, dist_to_t, P_Graph = restrict_graph(G, source, target, goal, weight=weight)
 
     print('P_Graph nodes: {} \nP_Graph edges: {}\n'.format(P_Graph.number_of_nodes(), P_Graph.number_of_edges()))
 
-    all_edges = list(P_Graph.edges())
+    all_edges = set(P_Graph.edges())
 
     counts = defaultdict(lambda: 1)
 
-    found_edges = set()
-
-    while True:
-        edge_choice = random.choice(all_edges)
-        if edge_choice in found_edges: 
-            print("Fail")
-            continue
+    while all_edges:
+        edge_choice = random.choice(list(all_edges))
         path = select_random_path(P_Graph, source, target, edge_choice, dist_from_s, dist_to_t, goal, counts)
-        found_edges.update(path)
+        all_edges = all_edges.difference(set(zip(path[:-1], path[1:])))
+        yield path
+
+def shortest_through_edge(G, source, target, edge_choice, weight="weight"):
+    a, b = edge_choice
+    path = nx.shortest_path(G, source, a, weight=weight)
+    path.extend(nx.shortest_path(G, b, target, weight=weight))
+    return path
+
+def random_shortest_paths(G, source, target, goal, weight="weight"):
+    _, _, P_Graph = restrict_graph(G, source, target, goal, weight=weight)
+    P_Graph = P_Graph.copy()
+
+    print('P_Graph nodes: {} \nP_Graph edges: {}\n'.format(P_Graph.number_of_nodes(), P_Graph.number_of_edges()))
+
+    centrality_dict = nx.edge_betweenness_centrality(P_Graph, weight=weight)
+    edge_list = list(centrality_dict.keys())
+    edge_list.sort(key=centrality_dict.get, reverse=True)
+
+    for edge_choice in edge_list:
+        # if edge_choice not in P_Graph.edges():
+        #     continue
+        try:
+            path = shortest_through_edge(P_Graph, source, target, edge_choice, weight=weight)
+        except:
+            continue
+        P_Graph.remove_edge(*edge_choice)
+        # P_Graph.remove_edges_from(zip(path[:-1], path[1:]))
         yield path
 
 def random_one_sided(G, source, target, goal, weight="weight"):
