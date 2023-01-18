@@ -12,17 +12,9 @@ from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
 
-# class ExperimentalSettings:
-#     name : str
-#     perturbation_function : function
-#     path_selector : PathSelector
-#     global_budget : float
-#     local_budget : float
-#     epsilon : float
-#     k : float
-#     node_pair : tuple
-#     top_k : int
-#     G: nx.DiGraph
+class Conditions:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
 
 
 if __name__ == "__main__":
@@ -44,7 +36,7 @@ if __name__ == "__main__":
     #         [3452,371],[2818,1670],[2000,87],[1969,1286],[2733,26],
     #         [963,423],[3285,2789],[1041,414],[3414,3051],[1888,1715]]
     node_pairs = []
-    while len(node_pairs) < 5:
+    while len(node_pairs) < 20:
         a,b = random.choices(list(G.nodes()),k=2)
         if nx.has_path(G, a, b):
             node_pairs.append((a,b))
@@ -54,20 +46,22 @@ if __name__ == "__main__":
 
     path_selectors = [
     # (SinglePairPathSelector, dict(name="Ours", update_every_iteration=False, weight="weight")),
-    # (SinglePairPathSelector, dict(name="Theirs", weight="weight")),
-    (SinglePairPathSelector, dict(name="Random Shortest Paths", generator_function=random_shortest_paths, update_every_iteration=False, weight="weight")),
+    (SinglePairPathSelector, dict(name="Theirs", weight="weight")),
+    # (SinglePairPathSelector, dict(name="Random Shortest Paths", generator_function=random_shortest_paths, update_every_iteration=False, weight="weight")),
+    (edge_centrality_selector, dict(name="Edge Centrality Selector", weight="weight")),
     # SinglePairPathSelector(name="One Sided Random", generator_function=random_one_sided, update_every_iteration=False, weight="weight"),
     ]
 
     configuration_ranges = dict(
-        perturbation_function = [pathattack],
         path_selector = path_selectors,
+        perturbation_function = [pathattack],
         global_budget = [1000],
         local_budget = [100],
         epsilon = [0.1],
-        k = [2],
+        k = [2, 3],
         node_pair = node_pairs,
-        top_k = [50],
+        top_k = [1, 50],
+        max_iterations = [100],
     )
 
     results = []
@@ -87,15 +81,21 @@ if __name__ == "__main__":
             kwargs["top_k"] = config["top_k"]
             if "generator_function" in kwargs and kwargs["generator_function"] in [random_paths, random_one_sided, random_shortest_paths]:
                 kwargs["goal"] = goal
+            if config["path_selector"][0] == edge_centrality_selector:
+                kwargs["goal"] = goal
+            kwargs["G"] = G
+            kwargs["source"] = source
+            kwargs["target"] = target
+            
             print("Config:", config)
             print("kwargs:", kwargs)
-            path_selector = config["path_selector"][0](G=G, source=source, target=target, **kwargs)
+            path_selector = config["path_selector"][0](**kwargs)
 
             print("Selector:", path_selector)
 
 
             start_time = time.time()
-            perturbations, stats_dict = attack(G, max_iterations=500, path_selector=path_selector, goal=goal, **{k:v for k,v in config.items() if k in ["perturbation_function", "global_budget", "local_budget"]})
+            perturbations, stats_dict = attack(G, path_selector=path_selector, goal=goal, **{k:v for k,v in config.items() if k in ["perturbation_function", "global_budget", "local_budget"]})
             perturbations = {k:v for k,v in perturbations.items() if v != 0}
             time_taken = time.time() - start_time
 

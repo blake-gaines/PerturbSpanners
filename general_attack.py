@@ -1,8 +1,11 @@
 from tqdm import tqdm
 import time
 
+# from selector_functions import random_shortest_paths
+
 # Make every path between s and t have length of at least goal
-def attack(G, path_selector, perturbation_function, goal, global_budget, local_budget, max_iterations=500):
+def attack(conditions):
+    # path_selector = random_shortest_paths(G, path_selector.source, path_selector.target, goal, weight="weight")
     paths = set()
     all_path_edges = set()
 
@@ -11,11 +14,14 @@ def attack(G, path_selector, perturbation_function, goal, global_budget, local_b
 
     current_distance = path_selector.distance(G)
 
+    G_prime = G.copy()
+
     pbar = tqdm(range(max_iterations), position=1)
     for i in pbar:
-            print("Adding")
+            # print("Adding")
             add_start_time = time.time()
-            new_paths = next(path_selector, None)
+            # new_paths = next(path_selector, None)
+            new_paths = path_selector.get_next(G=G_prime, current_distance=current_distance)
             if not new_paths:
                 break
             else:
@@ -24,7 +30,7 @@ def attack(G, path_selector, perturbation_function, goal, global_budget, local_b
                     all_path_edges.update(zip(new_path[:-1], new_path[1:]))
             add_times.append(time.time() - add_start_time)
 
-            print("Perturbing")
+            # print("Perturbing")
             perturb_start_time = time.time()
             perturbation_dict = perturbation_function(G, paths, all_path_edges, goal, global_budget, local_budget)
             perturb_times.append(time.time() - perturb_start_time)

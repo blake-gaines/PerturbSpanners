@@ -1,5 +1,6 @@
 import networkx as nx
 import itertools
+from selector_functions import *
 
 class PathSelector:
     def __init__(self, name, update_every_iteration=False, top_k=1):
@@ -18,7 +19,7 @@ class PathSelector:
     def initialize_generator(self):
         raise NotImplementedError
 
-    def __next__(self, filter_func=lambda x: True):
+    def get_next(self, filter_func=lambda x: True, **kwargs):
         self.raise_if_not_initialized()
         return list(map(tuple, itertools.islice(filter(filter_func, self.generator), self.top_k)))
 
@@ -62,8 +63,8 @@ class SetsPathSelector(SinglePairPathSelector):
             self.target = target
             self.update_graph(G)
 
-        def __next__(self):
-            return [path[1:-1] for path in super(self).__next__()]
+        def get_next(self, **kwargs):
+            return [path[1:-1] for path in super(self).get_next(**kwargs)]
 
 class MultiPairPathSelector(PathSelector):
     def __init__(self, name, G, pairs, path_selector_func=None, path_selectors=None, update_every_iteration=True, top_k=1, **selector_func_kwargs):
@@ -100,6 +101,27 @@ class MultiPairPathSelector(PathSelector):
     def distance(self, G):
         return min([selector.distance(G) for selector in self.path_selectors])
 
-    def __next__(self):
+    def get_next(self, **kwargs):
         self.raise_if_not_initialized()
         return (path for path_set in itertools.islice(self.generator, self.top_k) for path in path_set)
+
+class edge_centrality_selector(SinglePairPathSelector):
+    def __init__(self, G, source, target, goal, name, weight="weight", top_k=1):
+        super().__init__(G, source, target, name=name, update_every_iteration=False, top_k=top_k)
+        _, _, P_Graph = restrict_graph(G, source, target, goal, weight=weight)
+        self.P_Graph = P_Graph.copy()
+
+        self.top_k = top_k
+        centrality_dict = nx.edge_betweenness_centrality(P_Graph, weight=weight)
+        self.edge_list = list(centrality_dict.keys())
+        self.edge_list.sort(key=centrality_dict.get, reverse=True)
+        self.i = 0
+
+    def get_next(self, G, current_dist):
+        paths = []
+        for _ in range(self.top_k):
+            edge_choice = self.edge_list[self.i]
+            path = shortest_through_edge(G, self.source, self.target, edge_choice, weight="weight")
+            paths.append(tuple(path))
+            self.i = (self.i + 1) % len(self.edge_list)
+        return paths
