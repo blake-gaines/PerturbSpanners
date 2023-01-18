@@ -6,10 +6,10 @@ class PathSelector:
     name = "Path Selector"
     update_every_iteration = True
 
-    def __init__(self, c, update_every_iteration=False, filter_func=None, **kwargs):
+    def __init__(self, c, filter_func=None):
         self.top_k = c.top_k
-        self.generator = None
         self.filter_func = filter_func
+        self.generator = None
 
     def __iter__(self):
         self.raise_if_not_initialized()
@@ -54,43 +54,44 @@ class SinglePairPathSelector(PathSelector):
     def distance(self, G):
         return nx.shortest_path_length(G, self.source, self.target, weight="weight")
 
-def get_set_config(c):
-    c.source = "s_ghost"
-    c.target = "t_ghost"
-    G = c.G.copy()
-    G.add_node(c.source)
-    G.add_node(c.target)
-    for s in c.S:
-        c.G.add_edge(c.source, s, weight=0)
-    for t in c.T:
-        c.G.add_edge(t, c.target, weight=0)
-    return c
-
 class SetsPathSelector(SinglePairPathSelector):
     name = "Set Path Selector"
 
+    def get_set_config(c):
+        c.source = "s_ghost"
+        c.target = "t_ghost"
+        G = c.G.copy()
+        G.add_node(c.source)
+        G.add_node(c.target)
+        for s in c.S:
+            c.G.add_edge(c.source, s, weight=0)
+        for t in c.T:
+            c.G.add_edge(t, c.target, weight=0)
+        return c
+
     def __init__(self, c):
-        new_c = get_set_config(c)
-        super().__init__(get_set_config(new_c))
+        new_c = self.get_set_config(c)
+        super().__init__(new_c)
 
     def get_next(self, state):
         return [path[1:-1] for path in super(self).get_next(state)]
 
 class MultiPairPathSelector(PathSelector):
     name = "Multi Pairs Selector"
-    def __init__(self, c, path_selector_func=None, path_selectors=None, update_every_iteration=True, top_k=1, **selector_func_kwargs):
-        super().__init__(c, update_every_iteration)
+    def __init__(self, c, path_selector_func=SinglePairPathSelector, path_selectors=None, selector_func_kwargs=dict()):
+        super().__init__(c)
 
         self.generator = None
         self.path_selectors = path_selectors
 
-        if path_selector_func is not None:
+        if path_selectors is None:
             self.path_selectors = []
             for source, target in c.pairs:
-                self.path_selectors.append(self.path_selector_func(name=f"{self.name}: from {source} to {target}", **selector_func_kwargs))
+                self.path_selectors.append(path_selector_func(**selector_func_kwargs))
+                self.path_selectors[-1].name = f"{self.name}: from {source} to {target}"
                 self.path_selectors[-1].initialize_generator(c.G, source, target)
-        elif path_selectors is None:
-            raise Exception("Either path_selector_func or path_selectors must be provided.")
+        else:
+            self.path_selectors = path_selectors
         self.generator = self.combine_generators(self.path_selectors)
 
     def combine_generators(self, generators):  
@@ -117,9 +118,6 @@ class MultiPairPathSelector(PathSelector):
 
 ##################################
 
-class their_selector(SinglePairPathSelector):
-    name = "Their Selector"
-
 class our_selector(SinglePairPathSelector):
     name = "Our Selector"
     update_every_iteration = False
@@ -138,14 +136,28 @@ class edge_centrality_selector(SinglePairPathSelector):
         self.edge_list = list(centrality_dict.keys())
         self.edge_list.sort(key=centrality_dict.get, reverse=True)
         self.i = 0
+        self.base = 0
+        self.prev_distance = None
 
     def get_next(self, state):
         paths = []
-        for _ in range(self.top_k):
-            edge_choice = self.edge_list[self.i]
-            path = shortest_through_edge(state.G_prime, self.source, self.target, edge_choice, weight="weight")
-            paths.append(tuple(path))
-            self.i = (self.i + 1) % len(self.edge_list)
+        
+        self.i = 0
+        if state.current_distance == self.prev_distance:
+            self.base += 1
+
+        for j in range(len(self.edge_list)-self.i):
+            edge_choice = self.edge_list[self.base + self.i]
+            # if edge_choice in state.all_path_edges:
+            #     if j-1 == self.base:
+            #         self.base += 1
+            #     continue
+            path = tuple(shortest_through_edge(state.G_prime, self.source, self.target, edge_choice, weight="weight"))
+            if path not in state.paths:
+                paths.append(tuple(path))
+                if len(paths) == self.top_k:
+                    break
+            self.i = (self.i + 1) % (len(self.edge_list) - self.base)
         return paths
 
 
