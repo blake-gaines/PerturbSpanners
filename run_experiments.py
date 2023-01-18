@@ -1,7 +1,5 @@
 import time
-import networkx as nx
 from data import get_input_data
-import numpy as np
 from general_attack import attack
 from selector_classes import *
 import random
@@ -11,6 +9,7 @@ from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
 from math import prod
+from numpy import random as rand
 
 class Config:
     def __init__(self, **kwargs):
