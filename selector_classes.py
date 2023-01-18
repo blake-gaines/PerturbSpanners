@@ -1,6 +1,6 @@
 import networkx as nx
 import itertools
-from selector_functions import *
+from utils import *
 import copy
 
 class PathSelector:
@@ -22,7 +22,6 @@ class PathSelector:
         raise NotImplementedError
 
     def get_next(self, state):
-        # self.raise_if_not_initialized()
         return list(map(tuple, itertools.islice(filter(self.filter_func, self.generator), self.top_k)))
 
     def __repr__(self):
@@ -30,10 +29,6 @@ class PathSelector:
 
     def __str__(self):
         return self.name
-
-    # def raise_if_not_initialized(self):
-    #     if not self.generator:
-    #         raise Exception("Generator not initialized. Call initialize_generator first.")
 
 class SinglePairPathSelector(PathSelector):
     name = "Shortest Path Selector"
@@ -115,13 +110,7 @@ class MultiPairPathSelector(PathSelector):
         return min([selector.distance(G) for selector in self.path_selectors])
 
     def get_next(self, state):
-        # self.raise_if_not_initialized()
         generator = self.combine_generators(state)
-        # ah = list((path for path_set in itertools.islice(generator, self.top_k) for path in path_set))
-        # print("AHA", ah)
-        # return ah
-        # print([path for path_set in ah for path in path_set])
-        # print("AHA", list((path for path_set in itertools.islice(self.generator, self.top_k*len(self.path_selectors)) for path in path_set)))
         return list((tuple(path) for path_set in itertools.islice(generator, self.top_k) for path in path_set))
 
 ##################################

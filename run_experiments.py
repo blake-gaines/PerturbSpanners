@@ -4,7 +4,7 @@ from general_attack import attack
 from selector_classes import *
 import random
 from itertools import product
-from selector_functions import *
+from utils import *
 from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
