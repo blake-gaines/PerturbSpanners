@@ -12,10 +12,15 @@ from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
 
-class Conditions:
+class Config:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
+    def __contains__(self, item):
+        return item in self.__dict__
+
+    def __str__(self):
+        return str(self.__dict__)
 
 if __name__ == "__main__":
     random.seed(7)
@@ -36,7 +41,7 @@ if __name__ == "__main__":
     #         [3452,371],[2818,1670],[2000,87],[1969,1286],[2733,26],
     #         [963,423],[3285,2789],[1041,414],[3414,3051],[1888,1715]]
     node_pairs = []
-    while len(node_pairs) < 20:
+    while len(node_pairs) < 3:
         a,b = random.choices(list(G.nodes()),k=2)
         if nx.has_path(G, a, b):
             node_pairs.append((a,b))
@@ -44,16 +49,16 @@ if __name__ == "__main__":
 
     n_trials = 1
 
-    path_selectors = [
+    path_selector_classes = [
     # (SinglePairPathSelector, dict(name="Ours", update_every_iteration=False, weight="weight")),
-    (SinglePairPathSelector, dict(name="Theirs", weight="weight")),
+    their_selector,
     # (SinglePairPathSelector, dict(name="Random Shortest Paths", generator_function=random_shortest_paths, update_every_iteration=False, weight="weight")),
-    (edge_centrality_selector, dict(name="Edge Centrality Selector", weight="weight")),
+    edge_centrality_selector,
     # SinglePairPathSelector(name="One Sided Random", generator_function=random_one_sided, update_every_iteration=False, weight="weight"),
     ]
 
     configuration_ranges = dict(
-        path_selector = path_selectors,
+        path_selector_class = path_selector_classes,
         perturbation_function = [pathattack],
         global_budget = [1000],
         local_budget = [100],
@@ -67,40 +72,29 @@ if __name__ == "__main__":
     results = []
 
     for trial_number in range(n_trials):
-        for config_values in tqdm(product(*configuration_ranges.values()), position=1):
-            config = dict(zip(configuration_ranges.keys(), config_values))
+        for config_values in tqdm(product(*configuration_ranges.values()), position=0, leave=True):
+            config = Config(**dict(zip(configuration_ranges.keys(), config_values)))
+            config.G = G
             # print("\n========\nConfig:", config)
 
-            source, target = config["node_pair"]
-            original_path_length = nx.shortest_path_length(G, source, target, weight="weight")
-            goal = original_path_length * config["k"] + config["epsilon"]
+            config.source, config.target = config.node_pair
+            original_path_length = nx.shortest_path_length(G, config.source, config.target, weight="weight")
+            config.goal = original_path_length * config.k + config.epsilon
             # print(f"Original Path Length: {original_path_length} | Goal: {goal}")
-
-
-            kwargs = config["path_selector"][1]
-            kwargs["top_k"] = config["top_k"]
-            if "generator_function" in kwargs and kwargs["generator_function"] in [random_paths, random_one_sided, random_shortest_paths]:
-                kwargs["goal"] = goal
-            if config["path_selector"][0] == edge_centrality_selector:
-                kwargs["goal"] = goal
-            kwargs["G"] = G
-            kwargs["source"] = source
-            kwargs["target"] = target
             
             print("Config:", config)
-            print("kwargs:", kwargs)
-            path_selector = config["path_selector"][0](**kwargs)
+            config.path_selector = config.path_selector_class(c=config)
 
-            print("Selector:", path_selector)
+            print("Selector:", config.path_selector)
 
 
             start_time = time.time()
-            perturbations, stats_dict = attack(G, path_selector=path_selector, goal=goal, **{k:v for k,v in config.items() if k in ["perturbation_function", "global_budget", "local_budget"]})
+            perturbations, stats_dict = attack(config)
             perturbations = {k:v for k,v in perturbations.items() if v != 0}
             time_taken = time.time() - start_time
 
             # print("Cost: ", sum(perturbations.values()))
-            if stats_dict["Final Distance"] >= goal: 
+            if stats_dict["Final Distance"] >= config.goal: 
                 print("\n\nSUCCESS")
             else:
                 print("\n\nFAIL")
@@ -112,8 +106,7 @@ if __name__ == "__main__":
                 "Time Taken": time_taken,
                 "Perturbations": perturbations,
                 "Total Perturbation": sum(perturbations.values()) if perturbations is not None else None,
-                "Goal": goal,
-                **config,
+                **config.__dict__,
                 **stats_dict
             })
             print("\n\n================================\n\n")

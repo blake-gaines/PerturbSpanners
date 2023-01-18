@@ -2,6 +2,8 @@ import networkx as nx
 import gurobipy as gp
 from gurobipy import GRB
 
+
+
 # Minimize the perturbations of weights of path edges so that all paths have length at least goal
 def pathattack(G, paths, all_path_edges, goal, global_budget, local_budget, write_model=False, verbose=False):
     assert type(G) == nx.DiGraph, "Input must be an nx.DiGraph"
