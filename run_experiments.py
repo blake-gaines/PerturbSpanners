@@ -11,6 +11,7 @@ from selector_functions import *
 from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
+from math import prod
 
 class Config:
     def __init__(self, **kwargs):
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     #         [3452,371],[2818,1670],[2000,87],[1969,1286],[2733,26],
     #         [963,423],[3285,2789],[1041,414],[3414,3051],[1888,1715]]
     node_pairs = []
-    while len(node_pairs) < 3:
+    while len(node_pairs) < 10:
         a,b = random.choices(list(G.nodes()),k=2)
         if nx.has_path(G, a, b):
             node_pairs.append((a,b))
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     results = []
 
     for trial_number in range(n_trials):
-        for config_values in tqdm(product(*configuration_ranges.values()), position=0, leave=True):
+        for config_values in tqdm(product(*configuration_ranges.values()), desc="Configuration", position=0, leave=True, total=prod(len(v) for v in configuration_ranges.values())):
             config = Config(**dict(zip(configuration_ranges.keys(), config_values)))
             config.G = G
             # print("\n========\nConfig:", config)
@@ -82,10 +83,10 @@ if __name__ == "__main__":
             config.goal = original_path_length * config.k + config.epsilon
             # print(f"Original Path Length: {original_path_length} | Goal: {goal}")
             
-            print("Config:", config)
+            # print("Config:", config)
             config.path_selector = config.path_selector_class(c=config)
 
-            print("Selector:", config.path_selector)
+            # print("Selector:", config.path_selector)
 
 
             start_time = time.time()
@@ -95,20 +96,28 @@ if __name__ == "__main__":
 
             # print("Cost: ", sum(perturbations.values()))
             if stats_dict["Final Distance"] >= config.goal: 
-                print("\n\nSUCCESS")
+                # print("\n\nSUCCESS")
+                success = True
             else:
-                print("\n\nFAIL")
-            print("STATS:", {k:v for k,v in stats_dict.items() if "Times" not in k})
-            
+                success = False
+                # print("\n\nFAIL")
+            # print("STATS:", {k:v for k,v in stats_dict.items() if "Times" not in k})
+
+            del config.__dict__["G"]
+            del config.__dict__["path_selector"]
+            config.__dict__["Path Selector"] = config.path_selector_class.name
+            config.perturbation_function = str(config.perturbation_function)
+
             results.append({
                 "Trial Number": trial_number,
                 "Original Path Length": original_path_length,
                 "Time Taken": time_taken,
                 "Perturbations": perturbations,
                 "Total Perturbation": sum(perturbations.values()) if perturbations is not None else None,
+                "Success": success,
                 **config.__dict__,
                 **stats_dict
             })
-            print("\n\n================================\n\n")
+            # print("\n\n================================\n\n")
 
         pd.DataFrame.from_records(results).to_pickle("results.pkl")

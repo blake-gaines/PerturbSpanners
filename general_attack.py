@@ -25,7 +25,8 @@ def attack(c):
         current_distance = c.path_selector.distance(c.G),
     )
 
-    pbar = tqdm(range(c.max_iterations), position=1, leave=False)
+    pbar = tqdm(range(c.max_iterations), desc="Iterations", position=1, leave=False)
+    pbar.set_description("\n"+str(c))
     for i in pbar:
             # print("Adding")
             add_start_time = time.time()
@@ -52,10 +53,10 @@ def attack(c):
             for edge, perturbation in state.perturbation_dict.items():
                 G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
 
-            current_distance = c.path_selector.distance(G_prime)
-            pbar.set_description(f"    Current Distance: {current_distance} | Goal: {c.goal}")
+            state.current_distance = c.path_selector.distance(G_prime)
+            # pbar.set_description(f"Current Distance: {state.current_distance} | Goal: {c.goal}")
             
-            if current_distance >= c.goal:
+            if state.current_distance >= c.goal:
                 break
 
             if c.path_selector.update_every_iteration:
@@ -67,7 +68,7 @@ def attack(c):
         "Add Times": add_times,
         "Perturb Times": perturb_times,
         "Iterations": i+1,
-        "Final Distance": current_distance,
+        "Final Distance": state.current_distance,
     }
 
     return state.perturbation_dict, stats_dict

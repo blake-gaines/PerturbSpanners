@@ -6,7 +6,7 @@ class PathSelector:
     name = "Path Selector"
     update_every_iteration = True
 
-    def __init__(self, c, update_every_iteration=False, filter_func=lambda x: True, **kwargs):
+    def __init__(self, c, update_every_iteration=False, filter_func=None, **kwargs):
         self.top_k = c.top_k
         self.generator = None
         self.filter_func = filter_func
@@ -22,9 +22,13 @@ class PathSelector:
         raise NotImplementedError
 
     def get_next(self, state):
+        self.raise_if_not_initialized()
         return list(map(tuple, itertools.islice(filter(self.filter_func, self.generator), self.top_k)))
 
     def __repr__(self):
+        return self.name
+
+    def __str__(self):
         return self.name
 
     def raise_if_not_initialized(self):
@@ -33,7 +37,6 @@ class PathSelector:
 
 class SinglePairPathSelector(PathSelector):
     name = "Shortest Path Selector"
-    generator_function = nx.shortest_simple_paths
     generator_function_kwargs = {"weight": "weight"}
 
     def __init__(self, c, **generator_function_kwargs):
@@ -41,9 +44,12 @@ class SinglePairPathSelector(PathSelector):
         self.source = c.source
         self.target = c.target
         self.update_graph(c.G)
+
+    def generator_function(self, G, source, target, **kwargs):
+        return nx.shortest_simple_paths(G, source, target, **kwargs)
     
     def update_graph(self, new_graph):
-        self.generator = self.generator_function(new_graph, self.source, self.target)#, **self.generator_function_kwargs)
+        self.generator = self.generator_function(new_graph, self.source, self.target, **self.generator_function_kwargs)
 
     def distance(self, G):
         return nx.shortest_path_length(G, self.source, self.target, weight="weight")
@@ -108,6 +114,8 @@ class MultiPairPathSelector(PathSelector):
     def get_next(self, state):
         self.raise_if_not_initialized()
         return (path for path_set in itertools.islice(self.generator, self.top_k) for path in path_set)
+
+##################################
 
 class their_selector(SinglePairPathSelector):
     name = "Their Selector"
