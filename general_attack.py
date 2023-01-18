@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import time
 import networkx as nx
+import sys
 
 class State:
     def __init__(self, **kwargs):
@@ -31,7 +32,6 @@ def attack(c):
     for i in pbar:
             # print("\nAdding\n")
             add_start_time = time.time()
-            # new_paths = next(path_selector, None)
             new_paths = c.path_selector.get_next(state=state)
             if not new_paths:
                 status = "Fail: No Paths Returned"

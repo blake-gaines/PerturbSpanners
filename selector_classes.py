@@ -1,6 +1,7 @@
 import networkx as nx
 import itertools
 from selector_functions import *
+import copy
 
 class PathSelector:
     name = "Path Selector"
@@ -9,10 +10,9 @@ class PathSelector:
     def __init__(self, c, filter_func=None):
         self.top_k = c.top_k
         self.filter_func = filter_func
-        self.generator = None
 
     def __iter__(self):
-        self.raise_if_not_initialized()
+        # self.raise_if_not_initialized()
         return self
 
     def distance(self):
@@ -22,7 +22,7 @@ class PathSelector:
         raise NotImplementedError
 
     def get_next(self, state):
-        self.raise_if_not_initialized()
+        # self.raise_if_not_initialized()
         return list(map(tuple, itertools.islice(filter(self.filter_func, self.generator), self.top_k)))
 
     def __repr__(self):
@@ -31,9 +31,9 @@ class PathSelector:
     def __str__(self):
         return self.name
 
-    def raise_if_not_initialized(self):
-        if not self.generator:
-            raise Exception("Generator not initialized. Call initialize_generator first.")
+    # def raise_if_not_initialized(self):
+    #     if not self.generator:
+    #         raise Exception("Generator not initialized. Call initialize_generator first.")
 
 class SinglePairPathSelector(PathSelector):
     name = "Shortest Path Selector"
@@ -87,17 +87,19 @@ class MultiPairPathSelector(PathSelector):
         if path_selectors is None:
             self.path_selectors = []
             for source, target in c.pairs:
-                self.path_selectors.append(path_selector_func(**selector_func_kwargs))
+                c_copy = copy.copy(c)
+                c_copy.source = source
+                c_copy.target = target
+                self.path_selectors.append(path_selector_func(c_copy, **selector_func_kwargs))
                 self.path_selectors[-1].name = f"{self.name}: from {source} to {target}"
-                self.path_selectors[-1].initialize_generator(c.G, source, target)
         else:
             self.path_selectors = path_selectors
-        self.generator = self.combine_generators(self.path_selectors)
 
-    def combine_generators(self, generators):  
+    def combine_generators(self, state):  
         i = 0
+        generators = self.path_selectors.copy()
         while generators:
-            next_paths = next(generators[i])
+            next_paths = self.path_selectors[i].get_next(state)
             if next_paths:
                 yield next_paths
             else:
@@ -113,8 +115,14 @@ class MultiPairPathSelector(PathSelector):
         return min([selector.distance(G) for selector in self.path_selectors])
 
     def get_next(self, state):
-        self.raise_if_not_initialized()
-        return (path for path_set in itertools.islice(self.generator, self.top_k) for path in path_set)
+        # self.raise_if_not_initialized()
+        generator = self.combine_generators(state)
+        # ah = list((path for path_set in itertools.islice(generator, self.top_k) for path in path_set))
+        # print("AHA", ah)
+        # return ah
+        # print([path for path_set in ah for path in path_set])
+        # print("AHA", list((path for path_set in itertools.islice(self.generator, self.top_k*len(self.path_selectors)) for path in path_set)))
+        return list((tuple(path) for path_set in itertools.islice(generator, self.top_k) for path in path_set))
 
 ##################################
 

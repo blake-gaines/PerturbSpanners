@@ -27,13 +27,61 @@ Delivered to the U.S. Government with Unlimited Rights, as defined in DFARS Part
 import networkx as nx
 import pickle as pkl
 import numpy as np
-
-from numpy.random import MT19937
-
-from numpy.random import RandomState, SeedSequence
 import scipy as sp
+import pandas as pd
+from numpy import random as rand
 
-import sys
+class DataSets:
+    base_path = 'data/'
+    CORA =     {'path': 'cora/cora.cites', 'sep': '\t', 'name': 'Cora'}  # ~ 5K edges 2K nodes
+    FACEBOOK = {'path': 'facebook/facebook_combined.txt', 'sep': ' ', 'name': 'Facebook'} # ~88K edges 4K nodes
+    HEPTH = {'path': 'HepTh/ca-HepTh.txt', 'sep': '\t', 'name': 'High Energy Physics - Theory collaboration network'}
+
+    # returns an networkx graph object representing the dataset
+    # if lcc is true, it returns only largest connected component
+    @classmethod    
+    def get_undirected_networkx_graph(cls, dataset, lcc=True):
+        path = cls.base_path + dataset['path']
+        separator = dataset['sep']
+        edgelist = pd.read_csv(path, sep=separator, names=['target', 'source'], comment='#')
+        G = nx.from_pandas_edgelist(edgelist)
+        if lcc == True:
+            gs = [G.subgraph(c) for c in nx.connected_components(G)]
+            G = max(gs, key=len)
+        return G
+    
+    @classmethod   
+    def get_directed_networkx_graph(cls, dataset, lcc=True):
+        path = cls.base_path + dataset['path']
+        separator = dataset['sep']
+        edgelist = pd.read_csv(path, sep=separator, names=['target', 'source'], comment='#')
+        G = nx.from_pandas_edgelist(edgelist,source='source', target='target', create_using=nx.DiGraph())
+        if lcc == True:
+            gs = [G.subgraph(c) for c in nx.connected_components(G)]
+            G = max(gs, key=len)
+        return G
+
+    
+    @classmethod
+    def get_df_lcc(cls, dataset, lcc=True):
+        path = cls.base_path + dataset['path']
+        separator = dataset['sep']
+        edgelist = pd.read_csv(path, sep=separator, names=['target', 'source'], comment='#')
+        G = nx.from_pandas_edgelist(edgelist)
+        if lcc == True:
+            gs = [G.subgraph(c) for c in nx.connected_components(G)]
+            G = max(gs, key=len)
+        df = nx.to_pandas_edgelist(G)
+        df.columns = [0,1]
+        return df
+    
+    @classmethod
+    def get_df(cls, dataset):
+        path = cls.base_path + dataset['path']
+        separator = dataset['sep']
+        df = pd.read_csv(path, sep=separator, header=None, comment='#')
+        return df
+
 
 # from algorithms import *
 
@@ -133,6 +181,12 @@ def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Sin
         for ii in range(n_trials):
             add_weights(Gtemp, weights)
             G.append(Gtemp.copy())
+    elif graph_name == 'Facebook':
+        G = []
+        Gtemp = DataSets.get_directed_networkx_graph(dataset=DataSets.FACEBOOK, lcc=False)
+        for ii in range(n_trials):
+            add_weights(Gtemp, weights)
+            G.append(Gtemp.copy())
     else:
         print('invalid graph name')
         raise
@@ -184,7 +238,7 @@ def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Sin
             if experiment_type == "Single":
                 nodes = terminals
             if experiment_type == "Multiple Pairs":
-                nodes = list(zip(terminals[:num_nodes//2]. terminals[num_nodes//2:]))
+                nodes = list(zip(terminals[:num_nodes//2], terminals[num_nodes//2:]))
             elif experiment_type == "Sets":
                 nodes = (set(terminals[:num_nodes//2]), set(terminals[num_nodes//2:]))
             terminals = rand.choice(lcc, size=2, replace=False)

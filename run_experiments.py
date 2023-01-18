@@ -1,5 +1,4 @@
 import time
-from DataSets import DataSets
 import networkx as nx
 from data import get_input_data
 import numpy as np
@@ -12,7 +11,6 @@ from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
 from math import prod
-from collections import OrderedDict
 import pickle
 
 class Config:
@@ -34,7 +32,7 @@ if __name__ == "__main__":
     random.seed(81238.2345+9235.893456*seed_plus)
     rand.seed(892358293+27493463*seed_plus)
 
-    weighted = False
+    # weighted = False
 
     # G = DataSets.get_directed_networkx_graph(dataset=DataSets.FACEBOOK, lcc=False)
     # if weighted:
@@ -65,16 +63,16 @@ if __name__ == "__main__":
     }
 
     configuration_ranges = dict(
-        # experiment_type = ["Single", "Sets", "Multiple Pairs"],
-        # experiment_type = ["Single"],
-        experiment_type = ["Multiple Pairs"],
+        experiment_type = ["Single", "Sets", "Multiple Pairs"],
         perturbation_function = [pathattack],
         global_budget = [1000],
         local_budget = [100],
         epsilon = [0.1],
-        k = [2],
+        k = [2, 5],
         top_k = [1],
-        max_iterations = [100],
+        max_iterations = [500],
+        graph_name = ["er", "ba", "ws", "Facebook"],
+        weights = ['Poisson', 'Uniform', 'Equal'],
     )
 
     # input_data = get_input_data("er", n_trials=n_trials)
@@ -85,7 +83,7 @@ if __name__ == "__main__":
         for config_values in tqdm(product(*configuration_ranges.values()), desc="Configuration", total=prod(len(v) for v in configuration_ranges.values())): # position=0, leave=True, 
             config = Config(**dict(zip(configuration_ranges.keys(), config_values)))
 
-            input_data = get_input_data("er", experiment_type=config.experiment_type)
+            input_data = get_input_data(config.graph_name, weights=config.weights, experiment_type=config.experiment_type)
             config.update(input_data)
             
             if config.experiment_type == "Single":
@@ -94,16 +92,12 @@ if __name__ == "__main__":
                 config.S, config.T = config.nodes
             elif config.experiment_type == "Multiple Pairs":
                 config.pairs = config.nodes
-
-            # original_path_length = nx.shortest_path_length(config.G, config.source, config.target, weight="weight")
-            # config.goal = original_path_length * config.k + config.epsilon
-            # print(f"Original Path Length: {original_path_length} | Goal: {goal}")
             
-            print("Config:", config)
+            # print("Config:", config)
             for path_selector_class in path_selector_classes[config.experiment_type]:
                 config.path_selector = path_selector_class(config)
-                original_path_length = config.path_selector.distance(config.G)
-                config.goal = original_path_length * config.k + config.epsilon
+                original_distance = config.path_selector.distance(config.G)
+                config.goal = original_distance * config.k + config.epsilon
 
                 # print("Selector:", config.path_selector)
 
