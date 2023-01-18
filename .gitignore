@@ -3,4 +3,5 @@ data/
 *.log
 *.pkl
 *.csv
+*.lic
 __pycache__/
