@@ -1,7 +1,6 @@
 from tqdm import tqdm
 import time
 import networkx as nx
-import sys
 
 class State:
     def __init__(self, **kwargs):
@@ -10,8 +9,6 @@ class State:
 
 # Make every path between s and t have length of at least goal
 def attack(c):
-    # path_selector = random_shortest_paths(G, path_selector.source, path_selector.target, goal, weight="weight")
-
     add_times = []
     perturb_times = []
 
@@ -30,7 +27,6 @@ def attack(c):
     status= "Fail: Unknown"
     pbar = tqdm(range(c.max_iterations), desc=c.path_selector.name, position=1, leave=False)
     for i in pbar:
-            # print("\nAdding\n")
             add_start_time = time.time()
             new_paths = c.path_selector.get_next(state=state)
             if not new_paths:
@@ -55,7 +51,7 @@ def attack(c):
                 G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
 
             state.current_distance = c.path_selector.distance(G_prime)
-            pbar.set_description(f"Current Distance: {state.current_distance} | Goal: {c.goal}")
+            pbar.set_postfix_str(f"Current Distance: {state.current_distance} | Goal: {c.goal}")
             
             if state.current_distance >= c.goal:
                 break

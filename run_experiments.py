@@ -11,7 +11,6 @@ from perturbation_functions import *
 import pandas as pd
 from tqdm import tqdm
 from math import prod
-import pickle
 
 class Config:
     def __init__(self, **kwargs):
@@ -32,28 +31,6 @@ if __name__ == "__main__":
     random.seed(81238.2345+9235.893456*seed_plus)
     rand.seed(892358293+27493463*seed_plus)
 
-    # weighted = False
-
-    # G = DataSets.get_directed_networkx_graph(dataset=DataSets.FACEBOOK, lcc=False)
-    # if weighted:
-    #     nx.set_edge_attributes(G, {e: random.randint(1,10) for e in G.edges()}, "weight")
-    # else:
-    #     nx.set_edge_attributes(G, 1, "weight")
-
-    # print("Graph Information")
-    # print('nodes: {} \nedges: {}\n'.format(G.number_of_nodes(), G.number_of_edges()))
-
-    # # pairs = [[2565,999],[2254,996],[2308,65],[3067,2743],[1259,933],
-    # #         [2310,1934],[2130,402],[2569,1577],[2272,857],[1808,936],
-    # #         [3452,371],[2818,1670],[2000,87],[1969,1286],[2733,26],
-    # #         [963,423],[3285,2789],[1041,414],[3414,3051],[1888,1715]]
-    # pairs = []
-    # while len(pairs) < 10:p
-    #     a,b = random.choices(list(G.nodes()),k=2)
-    #     if nx.has_path(G, a, b):
-    #         pairs.append((a,b))
-    # print("Node Pairs:", pairs)
-
     n_trials = 1
 
     path_selector_classes = {
@@ -63,6 +40,8 @@ if __name__ == "__main__":
     }
 
     configuration_ranges = dict(
+        graph_name = ["er", "ba", "ws", "Facebook"],
+        weights = ['Poisson', 'Uniform', 'Equal'],
         experiment_type = ["Single", "Sets", "Multiple Pairs"],
         perturbation_function = [pathattack],
         global_budget = [1000],
@@ -71,11 +50,7 @@ if __name__ == "__main__":
         k = [2, 5],
         top_k = [1],
         max_iterations = [500],
-        graph_name = ["er", "ba", "ws", "Facebook"],
-        weights = ['Poisson', 'Uniform', 'Equal'],
     )
-
-    # input_data = get_input_data("er", n_trials=n_trials)
 
     results = []
 
@@ -93,13 +68,10 @@ if __name__ == "__main__":
             elif config.experiment_type == "Multiple Pairs":
                 config.pairs = config.nodes
             
-            # print("Config:", config)
             for path_selector_class in path_selector_classes[config.experiment_type]:
                 config.path_selector = path_selector_class(config)
                 original_distance = config.path_selector.distance(config.G)
                 config.goal = original_distance * config.k + config.epsilon
-
-                # print("Selector:", config.path_selector)
 
 
                 start_time = time.time()
@@ -107,14 +79,9 @@ if __name__ == "__main__":
                 perturbations = {k:v for k,v in perturbations.items() if v != 0}
                 time_taken = time.time() - start_time
 
-                # print("Cost: ", sum(perturbations.values()))
                 success = stats_dict["Final Distance"] >= config.goal
-                # print("SUCCESS" if success else "FAILURE")
-                # if not success: print("FAILURE")
                 status = stats_dict["Status"]
                 print(f"\n{status}\n")
-
-                # print("STATS:", {k:v for k,v in stats_dict.items() if "Times" not in k})
 
                 del config.__dict__["G"]
                 del config.__dict__["path_selector"]
@@ -123,7 +90,7 @@ if __name__ == "__main__":
 
                 results.append({
                     "Trial Number": trial_number,
-                    "Original Path Length": original_path_length,
+                    "Original Distance": original_distance,
                     "Time Taken": time_taken,
                     "Perturbations": perturbations,
                     "Total Perturbation": sum(perturbations.values()) if perturbations is not None else None,
@@ -131,6 +98,5 @@ if __name__ == "__main__":
                     **config.__dict__,
                     **stats_dict
                 })
-                print("\n\n================================\n\n")
 
-                pd.DataFrame.from_records(results).to_pickle("results.pkl")
+                pd.DataFrame.from_records(results).to_pickle(f"results.pkl")

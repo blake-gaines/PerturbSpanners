@@ -30,6 +30,7 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 from numpy import random as rand
+import random
 
 class DataSets:
     base_path = 'data/'
@@ -182,11 +183,19 @@ def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Sin
             add_weights(Gtemp, weights)
             G.append(Gtemp.copy())
     elif graph_name == 'Facebook':
-        G = []
         Gtemp = DataSets.get_directed_networkx_graph(dataset=DataSets.FACEBOOK, lcc=False)
-        for ii in range(n_trials):
-            add_weights(Gtemp, weights)
-            G.append(Gtemp.copy())
+        input_dict = dict()
+        nodes = []
+        while len(nodes) < 10:
+            a,b = random.choices(list(G.nodes()),k=2)
+            if nx.has_path(G, a, b):
+                nodes.append((a,b))
+        input_dict['G'] = Gtemp
+        input_dict['nodes'] = nodes
+        input_dict['graph_name'] = graph_name
+        return input_dict
+
+        
     else:
         print('invalid graph name')
         raise
