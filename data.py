@@ -25,10 +25,8 @@ The software is provided to you on an As-Is basis
 Delivered to the U.S. Government with Unlimited Rights, as defined in DFARS Part 252.227-7013 or 7014 (Feb 2014). Notwithstanding any copyright notice, U.S. Government rights in this work are defined by DFARS 252.227-7013 or DFARS 252.227-7014 as detailed above. Use of this work other than as specifically authorized by the U.S. Government may violate any copyrights that exist in this work
 """
 import networkx as nx
-import random
 import pickle as pkl
 import numpy as np
-from numpy import random as rand
 
 from numpy.random import MT19937
 
@@ -71,10 +69,7 @@ def add_weights(G, weights):
         G.edges[e]['weight'] = w[ctr]
         ctr += 1
 
-def get_input_data(graph_name, weights="Equal", seed_plus=7, n_trials=1, experiment_type="Single", num_nodes=10):
-    # sets seeds for reproducibility
-    random.seed(81238.2345+9235.893456*seed_plus)
-    rand.seed(892358293+27493463*seed_plus)
+def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Single", num_nodes=10):
 
     assert(weights in ['Poisson', 'Uniform', 'Equal'])
     # print(weights, ' weights')

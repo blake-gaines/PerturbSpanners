@@ -29,7 +29,10 @@ class Config:
         self.__dict__.update(d)
 
 if __name__ == "__main__":
-    random.seed(7)
+    seed_plus = 7
+    # sets seeds for reproducibility
+    random.seed(81238.2345+9235.893456*seed_plus)
+    rand.seed(892358293+27493463*seed_plus)
 
     weighted = False
 
@@ -62,8 +65,9 @@ if __name__ == "__main__":
     }
 
     configuration_ranges = dict(
-        experiment_type = ["Single", "Sets", "Multiple Pairs"],
+        # experiment_type = ["Single", "Sets", "Multiple Pairs"],
         # experiment_type = ["Single"],
+        experiment_type = ["Multiple Pairs"],
         perturbation_function = [pathattack],
         global_budget = [1000],
         local_budget = [100],
@@ -71,7 +75,6 @@ if __name__ == "__main__":
         k = [2],
         top_k = [1],
         max_iterations = [100],
-        path_selector_class = path_selector_classes,
     )
 
     # input_data = get_input_data("er", n_trials=n_trials)
@@ -92,13 +95,15 @@ if __name__ == "__main__":
             elif config.experiment_type == "Multiple Pairs":
                 config.pairs = config.nodes
 
-            original_path_length = nx.shortest_path_length(config.G, config.source, config.target, weight="weight")
-            config.goal = original_path_length * config.k + config.epsilon
+            # original_path_length = nx.shortest_path_length(config.G, config.source, config.target, weight="weight")
+            # config.goal = original_path_length * config.k + config.epsilon
             # print(f"Original Path Length: {original_path_length} | Goal: {goal}")
             
             print("Config:", config)
             for path_selector_class in path_selector_classes[config.experiment_type]:
                 config.path_selector = path_selector_class(config)
+                original_path_length = config.path_selector.distance(config.G)
+                config.goal = original_path_length * config.k + config.epsilon
 
                 # print("Selector:", config.path_selector)
 
@@ -132,6 +137,6 @@ if __name__ == "__main__":
                     **config.__dict__,
                     **stats_dict
                 })
-                # print("\n\n================================\n\n")
+                print("\n\n================================\n\n")
 
                 pd.DataFrame.from_records(results).to_pickle("results.pkl")

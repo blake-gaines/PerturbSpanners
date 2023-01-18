@@ -57,7 +57,7 @@ class SinglePairPathSelector(PathSelector):
 class SetsPathSelector(SinglePairPathSelector):
     name = "Set Path Selector"
 
-    def get_set_config(c):
+    def get_set_config(self, c):
         c.source = "s_ghost"
         c.target = "t_ghost"
         G = c.G.copy()
@@ -74,7 +74,7 @@ class SetsPathSelector(SinglePairPathSelector):
         super().__init__(new_c)
 
     def get_next(self, state):
-        return [path[1:-1] for path in super(self).get_next(state)]
+        return [path[1:-1] for path in super().get_next(state)]
 
 class MultiPairPathSelector(PathSelector):
     name = "Multi Pairs Selector"
