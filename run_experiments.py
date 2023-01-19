@@ -90,10 +90,8 @@ if __name__ == "__main__":
         return map(dict, product(*kv_iterators))
 
     for trial_number in range(n_trials):
-        print(f"\n----[ Trial {trial_number} ]----\n")
         for condition_dict in tqdm(iterate_over_ranges(condition_ranges), desc="Conditions", total=prod(len(v) for v in condition_ranges.values())):
             config = Config(**condition_dict)
-            # print(f"\nCurrent Conditions: {config}")
 
             input_data_dict = get_input_data(config.graph_name, weights=config.weights, experiment_type=config.experiment_type)
 
@@ -118,8 +116,7 @@ if __name__ == "__main__":
 
                     results.append({
                         "Trial Number": trial_number,
-                        **condition_dict,
-                        **{k:v for k,v in config_dict.items() if k not in ["perturber_class"]}, ## TODO: Fix this
+                        **{k:v for k,v in config.__dict__.items() if k not in ["perturber_class", "G", "path_selector"]}, ## TODO: Fix this
                         **result_dict
                     })
 
