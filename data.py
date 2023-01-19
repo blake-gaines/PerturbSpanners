@@ -192,7 +192,6 @@ def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Sin
                 nodes.append((a,b))
         input_dict['G'] = Gtemp
         input_dict['nodes'] = nodes
-        input_dict['graph_name'] = graph_name
         return input_dict
 
         
@@ -261,7 +260,6 @@ def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Sin
         input_dict = dict()
         input_dict['G'] = G[ii]
         input_dict['nodes'] = nodes
-        input_dict['graph_name'] = graph_name
         # input_list.append(input_dict)
 
     # # write file
