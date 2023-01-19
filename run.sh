@@ -7,9 +7,7 @@
 #SBATCH --output=output.log
 ## SBATCH --time=5-00:00:00
 
-module load cuda/10.1
-
-source /apps2/anaconda/5.1.0/etc/profile.d/conda.sh
+source /home/bbg16101/miniconda3/etc/profile.d/conda.sh
 
 conda activate gurobi
 
