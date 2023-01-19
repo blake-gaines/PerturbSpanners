@@ -13,7 +13,7 @@ In each iteration, it will:
 
 - Select path(s) to add to the set being considered (code in [selector_classes.py](./selector_classes.py))
 
-- Calculate (or approximate) the smallest perturbation of edge weights that will make all paths at least as long as some predefined goal (code in [perturbation_functions.py](./perturbation_functions.py))
+- Calculate (or approximate) the smallest perturbation of edge weights that will make all paths at least as long as some predefined goal (code in [perturbation_classes.py](./perturbation_classes.py))
 
 - Check if this local optimum is also a global solution (i.e. a global optimum)
 
