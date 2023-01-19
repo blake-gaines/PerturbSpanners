@@ -95,6 +95,7 @@ class MultiPairPathSelector(PathSelector):
                 c_copy = copy.copy(c)
                 c_copy.source = source
                 c_copy.target = target
+                c_copy.top_k = 1
                 self.path_selectors.append(path_selector_func(c_copy, **selector_func_kwargs))
                 self.path_selectors[-1].name = f"{self.name}: from {source} to {target}"
         else:

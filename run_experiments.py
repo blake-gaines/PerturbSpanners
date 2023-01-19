@@ -50,6 +50,8 @@ if __name__ == "__main__":
     # Which perturbers to test
     perturber_classes = {
         "PathAttack": PathAttack,
+        "GreeedyFirst": GreedyFirst,
+        "MinFirst": GreedyMin,
     }
 
     # Hyperparameter Ranges
@@ -67,7 +69,8 @@ if __name__ == "__main__":
     condition_ranges = dict(
         graph_name = ["er", "ba", "ws"],
         weights = ['Poisson', 'Uniform', 'Equal'],
-        experiment_type = ["Single", "Sets", "Multiple Pairs"],
+        # experiment_type = ["Single", "Sets", "Multiple Pairs"],
+        experiment_type = ["Single"],
     )
 
     results = []
