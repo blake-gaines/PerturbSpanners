@@ -43,7 +43,7 @@ if __name__ == "__main__":
     }
 
     configuration_ranges = dict(
-        perturbation_function = [pathattack],
+        perturber_class = [PathAttack],
         global_budget = [10],
         local_budget = [100],
         epsilon = [0.1],

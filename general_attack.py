@@ -24,6 +24,8 @@ def attack(c):
         current_distance = c.path_selector.distance(G),
     )
 
+    perturber = c.perturber_class(c)
+
     status= "Fail: Unknown"
     pbar = tqdm(range(c.max_iterations), desc=c.path_selector.name, position=2, leave=False)
     for i in pbar:
@@ -39,7 +41,8 @@ def attack(c):
             add_times.append(time.time() - add_start_time)
 
             perturb_start_time = time.time()
-            perturbation_result = c.perturbation_function(G, state.paths, state.all_path_edges, c.goal, c.global_budget, c.local_budget)
+            perturber.add_paths(new_paths)
+            perturbation_result = perturber.perturb()
             perturb_times.append(time.time() - perturb_start_time)
 
             if perturbation_result["LP Status"] != 2:
