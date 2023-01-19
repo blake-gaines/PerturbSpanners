@@ -25,7 +25,7 @@ def attack(c):
     )
 
     status= "Fail: Unknown"
-    pbar = tqdm(range(c.max_iterations), desc=c.path_selector.name, position=2, leave=False)
+    pbar = tqdm(range(c.max_iterations), desc="Current Experiment", position=2, leave=False)
     for i in pbar:
             add_start_time = time.time()
             new_paths = c.path_selector.get_next(state=state)
@@ -43,8 +43,8 @@ def attack(c):
             perturbation_result = c.perturber.perturb()
             perturb_times.append(time.time() - perturb_start_time)
 
-            if perturbation_result["LP Status"] != 2:
-                status = "Fail: Could not solve LP"
+            if perturbation_result["Success"] != True:
+                status = "Fail: Failure in Perturber"
                 break
 
             state.perturbation_dict = perturbation_result["Perturbation Dict"]
