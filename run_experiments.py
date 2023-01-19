@@ -53,12 +53,38 @@ if __name__ == "__main__":
     )
 
     condition_ranges = dict(
-        graph_name = ["er", "ba", "ws", "Facebook"],
+        graph_name = ["er", "ba", "ws"],
         weights = ['Poisson', 'Uniform', 'Equal'],
         experiment_type = ["Single", "Sets", "Multiple Pairs"],
     )
 
     results = []
+
+    def run_experiment(config):
+
+        original_distance = config.path_selector.distance(config.G)
+        config.goal = original_distance * config.k + config.epsilon
+
+        start_time = time.time()
+        perturbations, stats_dict = attack(config)
+        perturbations = {k:v for k,v in perturbations.items() if v != 0}
+        time_taken = time.time() - start_time
+
+        success = stats_dict["Final Distance"] >= config.goal
+        status = stats_dict["Status"]
+        config_iter.set_postfix_str(f"Last Status: {status}")
+
+        result_dict = {
+            "Original Distance": original_distance,
+            "Time Taken": time_taken,
+            "Perturbations": perturbations if success else None,
+            "Total Perturbation": sum(perturbations.values()) if success else None,
+            "Success": success,
+            **stats_dict
+        }
+
+        return result_dict
+        
 
     def iterate_over_ranges(d):
         kv_iterators = []
@@ -89,29 +115,15 @@ if __name__ == "__main__":
                 
                 for path_selector_class in path_selector_classes[config.experiment_type]:
                     config.path_selector = path_selector_class(config)
-                    original_distance = config.path_selector.distance(config.G)
-                    config.goal = original_distance * config.k + config.epsilon
 
 
-                    start_time = time.time()
-                    perturbations, stats_dict = attack(config)
-                    perturbations = {k:v for k,v in perturbations.items() if v != 0}
-                    time_taken = time.time() - start_time
-
-                    success = stats_dict["Final Distance"] >= config.goal
-                    status = stats_dict["Status"]
-                    config_iter.set_postfix_str(f"Last Status: {status}")
+                    result_dict = run_experiment(config)
 
                     results.append({
                         "Trial Number": trial_number,
-                        "Original Distance": original_distance,
-                        "Time Taken": time_taken,
-                        "Perturbations": perturbations,
-                        "Total Perturbation": sum(perturbations.values()) if perturbations is not None else None,
-                        "Success": success,
                         **condition_dict,
                         **config_dict,
-                        **stats_dict
+                        **result_dict
                     })
 
                     pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
