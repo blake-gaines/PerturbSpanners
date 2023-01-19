@@ -27,7 +27,7 @@ class PathSelector:
     def __repr__(self):
         return self.name
 
-    def __str__(self):
+    def __reduce__(self):
         return self.name
 
 class SinglePairPathSelector(PathSelector):
