@@ -44,12 +44,12 @@ if __name__ == "__main__":
 
     configuration_ranges = dict(
         perturbation_function = [pathattack],
-        global_budget = [1000],
+        global_budget = [10],
         local_budget = [100],
         epsilon = [0.1],
         k = [2, 5],
         top_k = [1, 50],
-        max_iterations = [3],
+        max_iterations = [200],
     )
 
     condition_ranges = dict(
@@ -66,8 +66,7 @@ if __name__ == "__main__":
         config.goal = original_distance * config.k + config.epsilon
 
         start_time = time.time()
-        perturbations, stats_dict = attack(config)
-        perturbations = {k:v for k,v in perturbations.items() if v != 0}
+        stats_dict = attack(config)
         time_taken = time.time() - start_time
 
         success = stats_dict["Final Distance"] >= config.goal
@@ -77,8 +76,6 @@ if __name__ == "__main__":
         result_dict = {
             "Original Distance": original_distance,
             "Time Taken": time_taken,
-            "Perturbations": perturbations if success else None,
-            "Total Perturbation": sum(perturbations.values()) if success else None,
             "Success": success,
             **stats_dict
         }

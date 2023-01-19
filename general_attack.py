@@ -39,19 +39,21 @@ def attack(c):
             add_times.append(time.time() - add_start_time)
 
             perturb_start_time = time.time()
-            state.perturbation_dict = c.perturbation_function(G, state.paths, state.all_path_edges, c.goal, c.global_budget, c.local_budget)
+            perturbation_result = c.perturbation_function(G, state.paths, state.all_path_edges, c.goal, c.global_budget, c.local_budget)
             perturb_times.append(time.time() - perturb_start_time)
 
-            if not state.perturbation_dict:
-                status = "Fail: No Perturbations Returned"
+            if perturbation_result["LP Status"] != 2:
+                status = "Fail: Could not solve LP"
                 break
+
+            state.perturbation_dict = perturbation_result["Perturbation Dict"]
 
             G_prime = G.copy()
             for edge, perturbation in state.perturbation_dict.items():
                 G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
 
             state.current_distance = c.path_selector.distance(G_prime)
-            pbar.set_postfix_str(f"Current Distance: {state.current_distance} | Goal: {c.goal}")
+            pbar.set_postfix_str(f"Current Distance: {state.current_distance}, Goal: {c.goal}")
             
             if state.current_distance >= c.goal:
                 break
@@ -71,7 +73,8 @@ def attack(c):
         "Perturb Times": perturb_times,
         "Iterations": i+1,
         "Final Distance": state.current_distance,
-        "Status": status
+        "Status": status,
+        **perturbation_result
     }
 
-    return state.perturbation_dict, stats_dict
+    return stats_dict
