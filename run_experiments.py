@@ -16,6 +16,9 @@ from numpy import random as rand
 ## TODO: Fix data.py
 
 class Config:
+    # Object to hold all the configuration information for an experiment
+    # Just for readability
+
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
@@ -34,20 +37,24 @@ if __name__ == "__main__":
     random.seed(81238.2345+9235.893456*seed_plus)
     rand.seed(892358293+27493463*seed_plus)
 
+    # Number of experiments to run
     n_trials = 1
 
+    # Which selectors to test
     path_selector_classes = {
         "Single": [SinglePairPathSelector],
         "Sets": [SetsPathSelector],
         "Multiple Pairs": [MultiPairPathSelector],
     }
 
+    # Which perturbers to test
     perturber_classes = {
         "PathAttack": PathAttack,
     }
 
+    # Hyperparameter Ranges
     configuration_ranges = dict(
-        perturber_class = ["PathAttack"],
+        perturber_class = list(perturber_classes.keys()),
         global_budget = [1000],
         local_budget = [100],
         epsilon = [0.1],
@@ -56,6 +63,7 @@ if __name__ == "__main__":
         max_iterations = [200],
     )
 
+    # Experimental condition ranges
     condition_ranges = dict(
         graph_name = ["er", "ba", "ws"],
         weights = ['Poisson', 'Uniform', 'Equal'],
@@ -65,7 +73,8 @@ if __name__ == "__main__":
     results = []
 
     def run_experiment(config):
-
+        # Given a configuration, run the experiment and return the results
+        
         original_distance = config.path_selector.distance(config.G)
         config.goal = original_distance * config.k + config.epsilon
 
@@ -73,14 +82,10 @@ if __name__ == "__main__":
         stats_dict = attack(config)
         time_taken = time.time() - start_time
 
-        success = stats_dict["Final Distance"] >= config.goal
-        status = stats_dict["Status"]
-        config_iter.set_postfix_str(f"Last Status: {status}")
-
         result_dict = {
             "Original Distance": original_distance,
             "Time Taken": time_taken,
-            "Success": success,
+            "Success": stats_dict["Final Distance"] >= config.goal,
             **stats_dict
         }
 
@@ -88,6 +93,8 @@ if __name__ == "__main__":
         
 
     def iterate_over_ranges(d):
+        # Given a dictionary of lists, return the cartesian product as a list of dictionaries
+
         kv_iterators = []
         for key, values in d.items():
             kv_iterators.append([(key, value) for value in values])
@@ -95,8 +102,11 @@ if __name__ == "__main__":
 
     for trial_number in range(n_trials):
         for condition_dict in tqdm(iterate_over_ranges(condition_ranges), desc="Conditions", total=prod(len(v) for v in condition_ranges.values())):
+
+            # Get the graph and the nodes for testing
             input_data_dict = get_input_data(**condition_dict)
 
+            # Create a configuration object
             config = Config(**condition_dict, **input_data_dict)
 
             if config.experiment_type == "Single":
@@ -108,6 +118,7 @@ if __name__ == "__main__":
 
             config_iter = tqdm(iterate_over_ranges(configuration_ranges), desc="Configurations", total=prod(len(v) for v in configuration_ranges.values()), position=1, leave=False)
             for config_dict in config_iter:
+                # For each possible configuration, update the config object and run the experiment
                 config.update(config_dict)
                 
                 for path_selector_class in path_selector_classes[config.experiment_type]:

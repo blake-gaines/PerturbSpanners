@@ -4,12 +4,15 @@ from utils import *
 import copy
 
 class PathSelector:
+    # General Path Selector class
     name = "Path Selector"
     update_every_iteration = True
 
     def __init__(self, c, filter_func=None):
+        # c is the configuration for the experiment
         self.c = c
         self.filter_func = filter_func
+        self.generator = None
 
     def __iter__(self):
         # self.raise_if_not_initialized()
@@ -28,6 +31,7 @@ class PathSelector:
         return self.name
 
 class SinglePairPathSelector(PathSelector):
+    # Path selector for single pairs of nodes, equivalent to PATHATTACK
     name = "Shortest Path Selector"
     generator_function_kwargs = {"weight": "weight"}
 
@@ -47,9 +51,12 @@ class SinglePairPathSelector(PathSelector):
         return nx.shortest_path_length(G, self.source, self.target, weight="weight")
 
 class SetsPathSelector(SinglePairPathSelector):
+    # Path selector for two sets of nodes
     name = "Set Path Selector"
 
     def get_set_config(self, c):
+        # Create a new config with a new graph, with a ghost source/target connected to each set
+
         c.source = "s_ghost"
         c.target = "t_ghost"
         G = c.G.copy()
@@ -63,20 +70,25 @@ class SetsPathSelector(SinglePairPathSelector):
         return c
 
     def __init__(self, c):
+        # Reset the configuration and reinitialize
         new_c = self.get_set_config(c)
         super().__init__(new_c)
 
     def get_next(self, state):
+        # Trim the ghost nodes from the paths
         return [path[1:-1] for path in super().get_next(state)]
 
 class MultiPairPathSelector(PathSelector):
+    # Path selector for multiple pairs of nodes
     name = "Multi Pairs Selector"
     def __init__(self, c, path_selector_func=SinglePairPathSelector, path_selectors=None, selector_func_kwargs=dict()):
+
         super().__init__(c)
 
         self.generator = None
         self.path_selectors = path_selectors
 
+        # Per-pair selectors can either be passed in or created using the path_selector_func argument (default: SinglePairPathSelector)
         if path_selectors is None:
             self.path_selectors = []
             for source, target in c.pairs:
@@ -89,6 +101,7 @@ class MultiPairPathSelector(PathSelector):
             self.path_selectors = path_selectors
 
     def combine_generators(self, state):  
+        # Combine the generators of the per-pair selectors into a single generator
         i = 0
         generators = self.path_selectors.copy()
         while generators:
@@ -100,16 +113,18 @@ class MultiPairPathSelector(PathSelector):
             i = (i + 1) % len(generators)
     
     def update_graph(self, new_graph):
+        # Update the graph of each per-pair selector
         for selector in self.path_selectors:
             selector.update_graph(new_graph)
         self.generator = self.combine_generators(self.path_selectors)
 
     def distance(self, G):
+        # Return the minimum distance of the per-pair selectors, equal to the distance between the sets
         return min([selector.distance(G) for selector in self.path_selectors])
 
     def get_next(self, state):
         generator = self.combine_generators(state)
-        return list((tuple(path) for path_set in itertools.islice(generator, self.c.top_k) for path in path_set))
+        return list((tuple(path) for path_set in itertools.islice(generator, self.c.top_k) for path in path_set)) # TODO: Fix
 
 ##################################
 
