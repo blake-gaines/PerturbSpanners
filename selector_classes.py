@@ -8,7 +8,7 @@ class PathSelector:
     update_every_iteration = True
 
     def __init__(self, c, filter_func=None):
-        self.top_k = c.top_k
+        self.c = c
         self.filter_func = filter_func
 
     def __iter__(self):
@@ -22,12 +22,9 @@ class PathSelector:
         raise NotImplementedError
 
     def get_next(self, state):
-        return list(map(tuple, itertools.islice(filter(self.filter_func, self.generator), self.top_k)))
+        return list(map(tuple, itertools.islice(filter(self.filter_func, self.generator), self.c.top_k)))
 
     def __repr__(self):
-        return self.name
-
-    def __reduce__(self):
         return self.name
 
 class SinglePairPathSelector(PathSelector):
@@ -112,7 +109,7 @@ class MultiPairPathSelector(PathSelector):
 
     def get_next(self, state):
         generator = self.combine_generators(state)
-        return list((tuple(path) for path_set in itertools.islice(generator, self.top_k) for path in path_set))
+        return list((tuple(path) for path_set in itertools.islice(generator, self.c.top_k) for path in path_set))
 
 ##################################
 
@@ -129,7 +126,6 @@ class edge_centrality_selector(SinglePairPathSelector):
         _, _, P_Graph = restrict_graph(c.G, c.source, c.target, c.goal, weight=weight)
         self.P_Graph = P_Graph.copy()
 
-        self.top_k = c.top_k
         centrality_dict = nx.edge_betweenness_centrality(P_Graph, weight=weight)
         self.edge_list = list(centrality_dict.keys())
         self.edge_list.sort(key=centrality_dict.get, reverse=True)
@@ -144,7 +140,7 @@ class edge_centrality_selector(SinglePairPathSelector):
         if state.current_distance == self.prev_distance:
             self.base += 1
 
-        for j in range(len(self.edge_list)-self.i):
+        for _ in range(len(self.edge_list)-self.i):
             edge_choice = self.edge_list[self.base + self.i]
             # if edge_choice in state.all_path_edges:
             #     if j-1 == self.base:
@@ -153,7 +149,7 @@ class edge_centrality_selector(SinglePairPathSelector):
             path = tuple(shortest_through_edge(state.G_prime, self.source, self.target, edge_choice, weight="weight"))
             if path not in state.paths:
                 paths.append(tuple(path))
-                if len(paths) == self.top_k:
+                if len(paths) == self.c.top_k:
                     break
             self.i = (self.i + 1) % (len(self.edge_list) - self.base)
         return paths
