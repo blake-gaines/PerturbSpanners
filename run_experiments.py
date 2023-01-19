@@ -53,7 +53,7 @@ if __name__ == "__main__":
         epsilon = [0.1],
         k = [2, 5],
         top_k = [1, 50],
-        max_iterations = [1000],
+        max_iterations = [200],
     )
 
     condition_ranges = dict(
