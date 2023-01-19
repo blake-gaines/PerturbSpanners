@@ -8,7 +8,7 @@ class Perturber:
         return self.name
 
 class PathAttack(Perturber):
-    name = "Path Attack"
+    name = "PathAttack"
     def __init__(self, config, write_model=False, verbose=False):
         self.write_model = write_model
         self.verbose = verbose
@@ -47,9 +47,9 @@ class PathAttack(Perturber):
         result_dict["LP Status"] = self.model.status
 
         if self.model.status == GRB.OPTIMAL:
-            result_dict["Perturbation Dict"] = { k : v.X for k,v in d.items() if v.X != 0}
+            result_dict["Perturbation Dict"] = { k : v.X for k,v in self.d.items() if v.X != 0}
             result_dict["Total Perturbations"] = self.model.objVal
-            result_dict["Global Budget Slack"] = self.global_budget.Slack
+            result_dict["Global Budget Slack"] = self.global_budget_constraint.Slack
         elif self.model.status == GRB.INFEASIBLE:
             self.model.computeIIS()
             result_dict["IIS_paths"] = [path for path in self.paths if self.path_constraints[path].IISConstr]

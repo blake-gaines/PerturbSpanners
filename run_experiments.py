@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     configuration_ranges = dict(
         perturber_class = [PathAttack],
-        global_budget = [10],
+        global_budget = [1000],
         local_budget = [100],
         epsilon = [0.1],
         k = [2, 5],
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             elif config.experiment_type == "Multiple Pairs":
                 config.pairs = config.nodes
 
-            config_iter = tqdm(iterate_over_ranges(configuration_ranges), desc="Configurations", total=prod(len(v) for v in configuration_ranges.values()), position=1)
+            config_iter = tqdm(iterate_over_ranges(configuration_ranges), desc="Configurations", total=prod(len(v) for v in configuration_ranges.values()), position=1, leave=False)
             for config_dict in config_iter:
                 config.update(config_dict)
                 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
                     results.append({
                         "Trial Number": trial_number,
                         **condition_dict,
-                        **config_dict,
+                        **{k:v for k,v in config_dict.items() if k not in ["perturber_class"]}, ## TODO: Fix this
                         **result_dict
                     })
 
