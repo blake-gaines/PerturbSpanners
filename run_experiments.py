@@ -11,6 +11,10 @@ from tqdm import tqdm
 from math import prod
 from numpy import random as rand
 
+## TODO: Get slack for the final system
+## TODO: Get list of distances during experiment
+## TODO: Fix data.py
+
 class Config:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -19,7 +23,7 @@ class Config:
         return item in self.__dict__
 
     def __str__(self):
-        return str(self.__dict__)
+        return ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
 
     def update(self, d):
         self.__dict__.update(d)
@@ -39,63 +43,75 @@ if __name__ == "__main__":
     }
 
     configuration_ranges = dict(
-        graph_name = ["er", "ba", "ws", "Facebook"],
-        weights = ['Poisson', 'Uniform', 'Equal'],
-        experiment_type = ["Single", "Sets", "Multiple Pairs"],
         perturbation_function = [pathattack],
         global_budget = [1000],
         local_budget = [100],
         epsilon = [0.1],
         k = [2, 5],
-        top_k = [1],
-        max_iterations = [500],
+        top_k = [1, 50],
+        max_iterations = [3],
+    )
+
+    condition_ranges = dict(
+        graph_name = ["er", "ba", "ws", "Facebook"],
+        weights = ['Poisson', 'Uniform', 'Equal'],
+        experiment_type = ["Single", "Sets", "Multiple Pairs"],
     )
 
     results = []
 
-    for trial_number in range(n_trials):
-        for config_values in tqdm(product(*configuration_ranges.values()), desc="Configuration", total=prod(len(v) for v in configuration_ranges.values())): # position=0, leave=True, 
-            config = Config(**dict(zip(configuration_ranges.keys(), config_values)))
+    def iterate_over_ranges(d):
+        kv_iterators = []
+        for key, values in d.items():
+            kv_iterators.append([(key, value) for value in values])
+        return map(dict, product(*kv_iterators))
 
-            input_data = get_input_data(config.graph_name, weights=config.weights, experiment_type=config.experiment_type)
-            config.update(input_data)
-            
+    for trial_number in range(n_trials):
+        print(f"\n----[ Trial {trial_number} ]----\n")
+        for condition_dict in tqdm(iterate_over_ranges(condition_ranges), desc="Conditions", total=prod(len(v) for v in condition_ranges.values())):
+            config = Config(**condition_dict)
+            # print(f"\nCurrent Conditions: {config}")
+
+            input_data_dict = get_input_data(config.graph_name, weights=config.weights, experiment_type=config.experiment_type)
+
+            config.update(input_data_dict)
+
             if config.experiment_type == "Single":
                 config.source, config.target = config.nodes
             elif config.experiment_type == "Sets":
                 config.S, config.T = config.nodes
             elif config.experiment_type == "Multiple Pairs":
                 config.pairs = config.nodes
-            
-            for path_selector_class in path_selector_classes[config.experiment_type]:
-                config.path_selector = path_selector_class(config)
-                original_distance = config.path_selector.distance(config.G)
-                config.goal = original_distance * config.k + config.epsilon
+
+            config_iter = tqdm(iterate_over_ranges(configuration_ranges), desc="Configurations", total=prod(len(v) for v in configuration_ranges.values()), position=1)
+            for config_dict in config_iter:
+                config.update(config_dict)
+                
+                for path_selector_class in path_selector_classes[config.experiment_type]:
+                    config.path_selector = path_selector_class(config)
+                    original_distance = config.path_selector.distance(config.G)
+                    config.goal = original_distance * config.k + config.epsilon
 
 
-                start_time = time.time()
-                perturbations, stats_dict = attack(config)
-                perturbations = {k:v for k,v in perturbations.items() if v != 0}
-                time_taken = time.time() - start_time
+                    start_time = time.time()
+                    perturbations, stats_dict = attack(config)
+                    perturbations = {k:v for k,v in perturbations.items() if v != 0}
+                    time_taken = time.time() - start_time
 
-                success = stats_dict["Final Distance"] >= config.goal
-                status = stats_dict["Status"]
-                print(f"\n{status}\n")
+                    success = stats_dict["Final Distance"] >= config.goal
+                    status = stats_dict["Status"]
+                    config_iter.set_postfix_str(f"Last Status: {status}")
 
-                del config.__dict__["G"]
-                del config.__dict__["path_selector"]
-                config.__dict__["Path Selector"] = path_selector_class.name
-                config.perturbation_function = str(config.perturbation_function)
+                    results.append({
+                        "Trial Number": trial_number,
+                        "Original Distance": original_distance,
+                        "Time Taken": time_taken,
+                        "Perturbations": perturbations,
+                        "Total Perturbation": sum(perturbations.values()) if perturbations is not None else None,
+                        "Success": success,
+                        **condition_dict,
+                        **config_dict,
+                        **stats_dict
+                    })
 
-                results.append({
-                    "Trial Number": trial_number,
-                    "Original Distance": original_distance,
-                    "Time Taken": time_taken,
-                    "Perturbations": perturbations,
-                    "Total Perturbation": sum(perturbations.values()) if perturbations is not None else None,
-                    "Success": success,
-                    **config.__dict__,
-                    **stats_dict
-                })
-
-                pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                    pd.DataFrame.from_records(results).to_pickle(f"results.pkl")

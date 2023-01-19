@@ -25,12 +25,12 @@ def attack(c):
     )
 
     status= "Fail: Unknown"
-    pbar = tqdm(range(c.max_iterations), desc=c.path_selector.name, position=1, leave=False)
+    pbar = tqdm(range(c.max_iterations), desc=c.path_selector.name, position=2, leave=False)
     for i in pbar:
             add_start_time = time.time()
             new_paths = c.path_selector.get_next(state=state)
             if not new_paths:
-                status = "Fail: No Paths Returned"
+                status = "Fail: No Paths Returned By Selector"
                 break
             else:
                 state.paths.update(new_paths)
