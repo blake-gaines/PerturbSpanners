@@ -59,9 +59,10 @@ class SetsPathSelector(SinglePairPathSelector):
         G.add_node(c.source)
         G.add_node(c.target)
         for s in c.S:
-            c.G.add_edge(c.source, s, weight=0)
+            G.add_edge(c.source, s, weight=0)
         for t in c.T:
-            c.G.add_edge(t, c.target, weight=0)
+            G.add_edge(t, c.target, weight=0)
+        c.G = G
         return c
 
     def __init__(self, c):
