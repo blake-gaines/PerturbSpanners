@@ -42,14 +42,18 @@ if __name__ == "__main__":
         "Multiple Pairs": [MultiPairPathSelector],
     }
 
+    perturber_classes = {
+        "PathAttack": PathAttack,
+    }
+
     configuration_ranges = dict(
-        perturber_class = [PathAttack],
+        perturber_class = ["PathAttack"],
         global_budget = [1000],
         local_budget = [100],
         epsilon = [0.1],
         k = [2, 5],
         top_k = [1, 50],
-        max_iterations = [200],
+        max_iterations = [1000],
     )
 
     condition_ranges = dict(
@@ -91,11 +95,9 @@ if __name__ == "__main__":
 
     for trial_number in range(n_trials):
         for condition_dict in tqdm(iterate_over_ranges(condition_ranges), desc="Conditions", total=prod(len(v) for v in condition_ranges.values())):
-            config = Config(**condition_dict)
+            input_data_dict = get_input_data(**condition_dict)
 
-            input_data_dict = get_input_data(config.graph_name, weights=config.weights, experiment_type=config.experiment_type)
-
-            config.update(input_data_dict)
+            config = Config(**condition_dict, **input_data_dict)
 
             if config.experiment_type == "Single":
                 config.source, config.target = config.nodes
@@ -110,13 +112,17 @@ if __name__ == "__main__":
                 
                 for path_selector_class in path_selector_classes[config.experiment_type]:
                     config.path_selector = path_selector_class(config)
-
+                    config.perturber = perturber_classes[config.perturber_class](config)
 
                     result_dict = run_experiment(config)
 
                     results.append({
                         "Trial Number": trial_number,
-                        **{k:v for k,v in config.__dict__.items() if k not in ["perturber_class", "G", "path_selector"]}, ## TODO: Fix this
+                        "Nodes": config.nodes,
+                        "Selector": config.path_selector.name,
+                        "Perturber": config.perturber.name,
+                        **condition_dict,
+                        **config_dict,
                         **result_dict
                     })
 
