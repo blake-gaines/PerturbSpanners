@@ -59,9 +59,6 @@ def attack(c):
             if state.current_distance >= c.goal:
                 break
 
-            if c.path_selector.update_every_iteration:
-                c.path_selector.update_graph(G_prime)
-
     if state.current_distance >= c.goal:
         status = "Success"
     elif c.max_iterations == i+1:

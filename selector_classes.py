@@ -6,16 +6,8 @@ import copy
 class PathSelector:
     # General Path Selector class
     name = "Path Selector"
-    update_every_iteration = True
-
-    def __init__(self, c, filter_func=None):
-        # c is the configuration for the experiment
-        self.c = c
-        self.filter_func = filter_func
-        self.generator = None
 
     def __iter__(self):
-        # self.raise_if_not_initialized()
         return self
 
     def distance(self):
@@ -25,30 +17,24 @@ class PathSelector:
         raise NotImplementedError
 
     def get_next(self, state):
-        return list(map(tuple, itertools.islice(filter(self.filter_func, self.generator), self.c.top_k)))
-
-    def __repr__(self):
-        return self.name
+        raise NotImplementedError
 
 class SinglePairPathSelector(PathSelector):
-    # Path selector for single pairs of nodes, equivalent to PATHATTACK
+    # Path selector for single pairs of nodes, by default equivalent to PATHATTACK
     name = "Shortest Path Selector"
     generator_function_kwargs = {"weight": "weight"}
 
-    def __init__(self, c, **generator_function_kwargs):
-        super().__init__(c)
-        self.source = c.source
-        self.target = c.target
-        self.update_graph(c.G)
-
-    def generator_function(self, G, source, target, **kwargs):
-        return nx.shortest_simple_paths(G, source, target, **kwargs)
+    def __init__(self, c):
+        self.c = c
     
-    def update_graph(self, new_graph):
-        self.generator = self.generator_function(new_graph, self.source, self.target, **self.generator_function_kwargs)
+    def get_next(self, state):
+        if self.c.top_k == 1:
+            return [tuple(nx.shortest_path(state.G_prime, self.c.source, self.c.target))]
+        else:
+            return list(map(tuple, itertools.islice(nx.shortest_simple_paths(state.G_prime, self.c.source, self.c.target), self.c.top_k)))
 
     def distance(self, G):
-        return nx.shortest_path_length(G, self.source, self.target, weight="weight")
+        return nx.shortest_path_length(G, self.c.source, self.c.target, weight="weight")
 
 class SetsPathSelector(SinglePairPathSelector):
     # Path selector for two sets of nodes
@@ -79,7 +65,8 @@ class SetsPathSelector(SinglePairPathSelector):
         return [path[1:-1] for path in super().get_next(state)]
 
 class MultiPairPathSelector(PathSelector):
-    # Path selector for multiple pairs of nodes
+    # Path selector for multiple pairs of nodes, cycles through per-pair selectors
+
     name = "Multi Pairs Selector"
     def __init__(self, c, path_selector_func=SinglePairPathSelector, path_selectors=None, selector_func_kwargs=dict()):
 
@@ -131,43 +118,15 @@ class MultiPairPathSelector(PathSelector):
 
 class our_selector(SinglePairPathSelector):
     name = "Our Selector"
-    update_every_iteration = False
-
-class edge_centrality_selector(SinglePairPathSelector):
-    name = "Edge Centrality Selector"
-    update_every_iteration=False
-
-    def __init__(self, c, weight="weight"):
-        super().__init__(c)
-        _, _, P_Graph = restrict_graph(c.G, c.source, c.target, c.goal, weight=weight)
-        self.P_Graph = P_Graph.copy()
-
-        centrality_dict = nx.edge_betweenness_centrality(P_Graph, weight=weight)
-        self.edge_list = list(centrality_dict.keys())
-        self.edge_list.sort(key=centrality_dict.get, reverse=True)
-        self.i = 0
-        self.base = 0
-        self.prev_distance = None
+    def __init__(self, c):
+        self.c = c
+        self.generator = nx.shortest_simple_paths(c.G, self.c.source, self.c.target)
 
     def get_next(self, state):
-        paths = []
-        
-        self.i = 0
-        if state.current_distance == self.prev_distance:
-            self.base += 1
+        return list(map(tuple, itertools.islice(self.generator, self.c.top_k)))
 
-        for _ in range(len(self.edge_list)-self.i):
-            edge_choice = self.edge_list[self.base + self.i]
-            # if edge_choice in state.all_path_edges:
-            #     if j-1 == self.base:
-            #         self.base += 1
-            #     continue
-            path = tuple(shortest_through_edge(state.G_prime, self.source, self.target, edge_choice, weight="weight"))
-            if path not in state.paths:
-                paths.append(tuple(path))
-                if len(paths) == self.c.top_k:
-                    break
-            self.i = (self.i + 1) % (len(self.edge_list) - self.base)
-        return paths
+class random_walk_selector(SinglePairPathSelector):
+    name = "Random Walk Selector"
 
-
+    def get_next(self, state):
+        return list(map(tuple, itertools.islice(random_one_sided(c.G, self.c.source, self.c.target), self.c.top_k)))
