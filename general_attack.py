@@ -43,7 +43,7 @@ def attack(c):
             perturbation_result = c.perturber.perturb()
             perturb_times.append(time.time() - perturb_start_time)
 
-            if perturbation_result["Success"] != True:
+            if perturbation_result["Perturbation Error"] != False:
                 status = "Fail: Failure in Perturber"
                 break
 

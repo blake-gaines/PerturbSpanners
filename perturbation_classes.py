@@ -48,13 +48,13 @@ class PathAttack:
             result_dict["Total Perturbations"] = self.model.objVal
             result_dict["Global Budget Slack"] = self.global_budget_constraint.Slack
             result_dict["Supporting Paths"] = [path for path in self.paths if self.path_constraints[path].Slack == 0]
-            result_dict["Success"] = True
+            result_dict["Perturbation Failure"] = False
         elif self.model.status == GRB.INFEASIBLE:
             self.model.computeIIS()
             result_dict["IIS_paths"] = [path for path in self.paths if self.path_constraints[path].IISConstr]
             result_dict["IIS_edges"] = [edge for edge in self.all_path_edges if self.edge_upper_bounds[edge].IISConstr]
             result_dict["IIS_global_budget"] = self.global_budget_constraint.IISConstr
-            result_dict["Success"] = False
+            result_dict["Perturbation Failure"] = True
         return result_dict
 
 class Greedy:
