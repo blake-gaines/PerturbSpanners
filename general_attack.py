@@ -13,6 +13,7 @@ def attack(c):
     perturb_times = []
 
     G = c.G.copy()
+    # TODO: Merge edge perturbations for undirected graphs
     if type(G) == nx.Graph:
         G = G.to_directed(as_view=True)
 
@@ -30,6 +31,9 @@ def attack(c):
         # Add Paths
         add_start_time = time.time()
         new_paths = c.path_selector.get_next(state=state)
+        add_times.append(time.time() - add_start_time)
+
+        # Update State
         if not new_paths:
             status = "Fail: No Paths Returned By Selector"
             break
@@ -37,7 +41,6 @@ def attack(c):
             state.paths.update(new_paths)
             for new_path in new_paths: 
                 state.all_path_edges.update(zip(new_path[:-1], new_path[1:]))
-        add_times.append(time.time() - add_start_time)
 
         # Perturb Graph
         perturb_start_time = time.time()
@@ -60,7 +63,7 @@ def attack(c):
         state.current_distance = c.path_selector.distance(G_prime)
         if state.current_distance >= c.goal:
             break
-        
+
         pbar.set_postfix_str(f"Current Distance: {state.current_distance}, Goal: {c.goal}")
 
     if state.current_distance >= c.goal:
