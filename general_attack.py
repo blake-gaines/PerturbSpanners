@@ -27,37 +27,41 @@ def attack(c):
     status= "Fail: Unknown"
     pbar = tqdm(range(c.max_iterations), desc="Current Experiment", position=2, leave=False)
     for i in pbar:
-            add_start_time = time.time()
-            new_paths = c.path_selector.get_next(state=state)
-            if not new_paths:
-                status = "Fail: No Paths Returned By Selector"
-                break
-            else:
-                state.paths.update(new_paths)
-                for new_path in new_paths: 
-                    state.all_path_edges.update(zip(new_path[:-1], new_path[1:]))
-            add_times.append(time.time() - add_start_time)
+        # Add Paths
+        add_start_time = time.time()
+        new_paths = c.path_selector.get_next(state=state)
+        if not new_paths:
+            status = "Fail: No Paths Returned By Selector"
+            break
+        else:
+            state.paths.update(new_paths)
+            for new_path in new_paths: 
+                state.all_path_edges.update(zip(new_path[:-1], new_path[1:]))
+        add_times.append(time.time() - add_start_time)
 
-            perturb_start_time = time.time()
-            c.perturber.add_paths(new_paths)
-            perturbation_result = c.perturber.perturb()
-            perturb_times.append(time.time() - perturb_start_time)
+        # Perturb Graph
+        perturb_start_time = time.time()
+        c.perturber.add_paths(new_paths)
+        perturbation_result = c.perturber.perturb()
+        perturb_times.append(time.time() - perturb_start_time)
 
-            if perturbation_result["Perturbation Error"] != False:
-                status = "Fail: Failure in Perturber"
-                break
+        if perturbation_result["Perturbation Error"] != False:
+            status = "Fail: Failure in Perturber"
+            break
 
-            state.perturbation_dict = perturbation_result["Perturbation Dict"]
+        state.perturbation_dict = perturbation_result["Perturbation Dict"]
 
-            G_prime = G.copy()
-            for edge, perturbation in state.perturbation_dict.items():
-                G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
+        # Create Perturbed Graph TODO: make this more efficient
+        G_prime = G.copy()
+        for edge, perturbation in state.perturbation_dict.items():
+            G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
 
-            state.current_distance = c.path_selector.distance(G_prime)
-            pbar.set_postfix_str(f"Current Distance: {state.current_distance}, Goal: {c.goal}")
-            
-            if state.current_distance >= c.goal:
-                break
+        # Check if we are done
+        state.current_distance = c.path_selector.distance(G_prime)
+        if state.current_distance >= c.goal:
+            break
+        
+        pbar.set_postfix_str(f"Current Distance: {state.current_distance}, Goal: {c.goal}")
 
     if state.current_distance >= c.goal:
         status = "Success"
