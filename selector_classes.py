@@ -129,4 +129,4 @@ class random_walk_selector(SinglePairPathSelector):
     name = "Random Walk Selector"
 
     def get_next(self, state):
-        return list(map(tuple, itertools.islice(random_one_sided(c.G, self.c.source, self.c.target), self.c.top_k)))
+        return list(map(tuple, itertools.islice(random_one_sided(self.c.G, self.c.source, self.c.target), self.c.top_k)))
