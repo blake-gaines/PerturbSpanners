@@ -48,7 +48,7 @@ def attack(c):
         perturbation_result = c.perturber.perturb()
         perturb_times.append(time.time() - perturb_start_time)
 
-        if perturbation_result["Perturbation Error"] != False:
+        if perturbation_result["Perturbation Failure"]:
             status = "Fail: Failure in Perturber"
             break
 
@@ -58,17 +58,17 @@ def attack(c):
         G_prime = G.copy()
         for edge, perturbation in state.perturbation_dict.items():
             G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
+        state.G_prime = G_prime
 
         # Check if we are done
         state.current_distance = c.path_selector.distance(G_prime)
         if state.current_distance >= c.goal:
+            status = "Success"
             break
 
-        pbar.set_postfix_str(f"Current Distance: {state.current_distance}, Goal: {c.goal}")
+        pbar.set_postfix_str(f"Distance: {state.current_distance}, Goal: {c.goal}, Cost: {round(sum(state.perturbation_dict.values()))}")
 
-    if state.current_distance >= c.goal:
-        status = "Success"
-    elif c.max_iterations == i+1:
+    if status != "Success" and c.max_iterations == i+1:
         status = "Fail: Max Iterations"
 
     stats_dict = {

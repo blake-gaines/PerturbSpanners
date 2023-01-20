@@ -83,7 +83,7 @@ class Greedy:
                     self.perturbations[chosen_edge] = needed_perturbation
 
     def perturb(self):
-        return {"Perturbation Dict" : self.perturbations, "Total Perturbations" : sum(self.perturbations.values()), "Success": True}
+        return {"Perturbation Dict" : self.perturbations, "Total Perturbations" : sum(self.perturbations.values()), "Perturbation Failure": False}
 
 class GreedyFirst(Greedy):
     name = "GreedyFirst"

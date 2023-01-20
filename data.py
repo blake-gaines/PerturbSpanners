@@ -186,12 +186,19 @@ def get_input_data(graph_name, weights="Equal", n_trials=1, experiment_type="Sin
         Gtemp = DataSets.get_directed_networkx_graph(dataset=DataSets.FACEBOOK, lcc=False)
         input_dict = dict()
         nodes = []
-        while len(nodes) < 10:
-            a,b = random.choices(list(G.nodes()),k=2)
-            if nx.has_path(G, a, b):
+        while len(nodes) < (num_nodes if experiment_type != "Single" else 1):
+            print(len(nodes), end='\r', flush=True)
+            a,b = random.choices(list(Gtemp.nodes()),k=2)
+            if nx.has_path(Gtemp, a, b):
                 nodes.append((a,b))
+        if experiment_type == "Single":
+            nodes = (nodes[0][0], nodes[0][1])
+        if experiment_type == "Sets":
+            nodes = [[x[0] for x in nodes], [x[1] for x in nodes]]
+        add_weights(Gtemp, weights)
         input_dict['G'] = Gtemp
         input_dict['nodes'] = nodes
+        # print("input_dict: ", input_dict)
         return input_dict
 
         

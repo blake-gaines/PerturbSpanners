@@ -38,7 +38,7 @@ if __name__ == "__main__":
     rand.seed(892358293+27493463*seed_plus)
 
     # Number of experiments to run
-    n_trials = 1
+    n_trials = 10
 
     # Which selectors to test
     path_selector_classes = {
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # Which perturbers to test
     perturber_classes = {
-        "PathAttack": PathAttack,
+        # "PathAttack": PathAttack,
         "GreeedyFirst": GreedyFirst,
         "MinFirst": GreedyMin,
     }
@@ -61,16 +61,15 @@ if __name__ == "__main__":
         local_budget = [100],
         epsilon = [0.1],
         k = [2, 5],
-        top_k = [1, 50],
+        top_k = [1],
         max_iterations = [200],
     )
 
     # Experimental condition ranges
     condition_ranges = dict(
-        graph_name = ["er", "ba", "ws"],
+        graph_name = ["Facebook", "er", "ba", "ws"],
         weights = ['Poisson', 'Uniform', 'Equal'],
-        # experiment_type = ["Single", "Sets", "Multiple Pairs"],
-        experiment_type = ["Single"],
+        experiment_type = ["Single", "Sets", "Multiple Pairs"],
     )
 
     results = []
@@ -104,6 +103,7 @@ if __name__ == "__main__":
         return map(dict, product(*kv_iterators))
 
     for trial_number in range(n_trials):
+        print(f"Trial Number: {trial_number}")
         for condition_dict in tqdm(iterate_over_ranges(condition_ranges), desc="Conditions", total=prod(len(v) for v in condition_ranges.values())):
 
             # Get the graph and the nodes for testing

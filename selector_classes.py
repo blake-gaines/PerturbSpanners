@@ -22,16 +22,15 @@ class PathSelector:
 class SinglePairPathSelector(PathSelector):
     # Path selector for single pairs of nodes, by default equivalent to PATHATTACK
     name = "Shortest Path Selector"
-    generator_function_kwargs = {"weight": "weight"}
 
     def __init__(self, c):
         self.c = c
     
     def get_next(self, state):
         if self.c.top_k == 1:
-            return [tuple(nx.shortest_path(state.G_prime, self.c.source, self.c.target))]
+            return [tuple(nx.shortest_path(state.G_prime, self.c.source, self.c.target, weight="weight"))]
         else:
-            return list(map(tuple, itertools.islice(nx.shortest_simple_paths(state.G_prime, self.c.source, self.c.target), self.c.top_k)))
+            return list(map(tuple, itertools.islice(nx.shortest_simple_paths(state.G_prime, self.c.source, self.c.target, weight="weight"), self.c.top_k)))
 
     def distance(self, G):
         return nx.shortest_path_length(G, self.c.source, self.c.target, weight="weight")
@@ -70,7 +69,7 @@ class MultiPairPathSelector(PathSelector):
     name = "Multi Pairs Selector"
     def __init__(self, c, path_selector_func=SinglePairPathSelector, path_selectors=None, selector_func_kwargs=dict()):
 
-        super().__init__(c)
+        self.c = c
 
         self.generator = None
         self.path_selectors = path_selectors
