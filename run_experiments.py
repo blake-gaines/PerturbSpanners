@@ -105,7 +105,7 @@ if __name__ == "__main__":
                 config.update(config_dict)
                 for trial_index in range(config.n_trials):
                     if sum(process.is_alive() for process in processes)>n_processes or (len(processes) == total_experiments and len(results) < total_experiments):
-                        results.append(queue.get())
+                        results.append(queue.get(timeout=600))
     
                         pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
                         
