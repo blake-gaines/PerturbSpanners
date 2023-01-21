@@ -26,8 +26,7 @@ def attack(c):
     )
 
     status= "Fail: Unknown"
-    pbar = tqdm(range(c.max_iterations), desc="Current Experiment", position=2, leave=False)
-    for i in pbar:
+    for i in range(c.max_iterations):
         # Add Paths
         add_start_time = time.time()
         new_paths = c.path_selector.get_next(state=state)
@@ -65,8 +64,6 @@ def attack(c):
         if state.current_distance >= c.goal:
             status = "Success"
             break
-
-        pbar.set_postfix_str(f"Distance: {state.current_distance}, Goal: {c.goal}, Cost: {round(sum(state.perturbation_dict.values()))}")
 
     if status != "Success" and c.max_iterations == i+1:
         status = "Fail: Max Iterations"

@@ -1,15 +1,14 @@
 import time
-from data import get_input_data
+from data import get_graph, get_nodes
 from general_attack import attack
-from selector_classes import *
 import random
 from itertools import product
-from utils import *
-from perturbation_classes import *
 import pandas as pd
 from tqdm import tqdm
 from math import prod
 from numpy import random as rand
+from settings import *
+from multiprocessing import Process, Manager, Queue, active_children
 
 ## TODO: Get slack for the final system
 ## TODO: Get list of distances during experiment
@@ -19,7 +18,7 @@ class Config:
     # Object to hold all the configuration information for an experiment
     # Just for readability
 
-    def __init__(self, **kwargs):
+    def __init__(self, kwargs):
         self.__dict__.update(kwargs)
 
     def __contains__(self, item):
@@ -31,113 +30,87 @@ class Config:
     def update(self, d):
         self.__dict__.update(d)
 
+def iterate_over_ranges(d):
+    # Given a dictionary of lists, return the cartesian product as a list of dictionaries
+
+    kv_iterators = []
+    for key, values in d.items():
+        kv_iterators.append([(key, value) for value in values])
+    return map(dict, product(*kv_iterators))
+
+def run_experiment(config_dict, G_dict, queue=None):
+    # Given a configuration, run the experiment and return the results
+    config = Config(config_dict)
+
+    config.G = G_dict["G"].copy()
+
+    config.path_selector = path_selector_classes[config.path_selector_class](config)
+    config.perturber = perturber_classes[config.perturber_class](config)
+
+    config.goal = config.path_selector.goal
+
+    start_time = time.time()
+    stats_dict = attack(config)
+    time_taken = time.time() - start_time
+
+    original_distance = config.path_selector.distance(config.G)
+    config.goal = original_distance * config.k + config.epsilon
+
+    result_dict = {
+        "Original Distance": original_distance,
+        "Time Taken": time_taken,
+        "Success": stats_dict["Final Distance"] >= config.goal,
+        **stats_dict,
+        **{k:v for k,v in config.__dict__.items() if k not in ["G", "path_selector", "perturber"]},
+    }
+
+    if queue is not None:
+        queue.put(result_dict)
+
+    return result_dict
+
 if __name__ == "__main__":
     seed_plus = 7
     # sets seeds for reproducibility
     random.seed(81238.2345+9235.893456*seed_plus)
     rand.seed(892358293+27493463*seed_plus)
 
-    # Number of experiments to run
-    n_trials = 10
-
-    # Which selectors to test
-    path_selector_classes = {
-        "Single": [SinglePairPathSelector],
-        "Sets": [SetsPathSelector],
-        "Multiple Pairs": [MultiPairPathSelector],
-    }
-
-    # Which perturbers to test
-    perturber_classes = {
-        # "PathAttack": PathAttack,
-        "GreeedyFirst": GreedyFirst,
-        "MinFirst": GreedyMin,
-    }
-
-    # Hyperparameter Ranges
-    configuration_ranges = dict(
-        perturber_class = list(perturber_classes.keys()),
-        global_budget = [1000],
-        local_budget = [100],
-        epsilon = [0.1],
-        k = [2, 5],
-        top_k = [1],
-        max_iterations = [200],
-    )
-
-    # Experimental condition ranges
-    condition_ranges = dict(
-        graph_name = ["Facebook", "er", "ba", "ws"],
-        weights = ['Poisson', 'Uniform', 'Equal'],
-        experiment_type = ["Single", "Sets", "Multiple Pairs"],
-    )
-
     results = []
 
-    def run_experiment(config):
-        # Given a configuration, run the experiment and return the results
-        
-        original_distance = config.path_selector.distance(config.G)
-        config.goal = original_distance * config.k + config.epsilon
+    processes = []
+    queue = Queue(maxsize=n_processes)
 
-        start_time = time.time()
-        stats_dict = attack(config)
-        time_taken = time.time() - start_time
+    pbar = tqdm("Progress", total=total_experiments)
 
-        result_dict = {
-            "Original Distance": original_distance,
-            "Time Taken": time_taken,
-            "Success": stats_dict["Final Distance"] >= config.goal,
-            **stats_dict
-        }
+    for condition_dict in iterate_over_ranges(condition_ranges):
+        config = Config(condition_dict)
 
-        return result_dict
-        
+        # Get the graph and the nodes for testing
+        G = get_graph(config)
+        all_nodes = get_nodes(G, config)
+        manager = Manager()
+        G_dict = manager.dict({"G": G})
 
-    def iterate_over_ranges(d):
-        # Given a dictionary of lists, return the cartesian product as a list of dictionaries
-
-        kv_iterators = []
-        for key, values in d.items():
-            kv_iterators.append([(key, value) for value in values])
-        return map(dict, product(*kv_iterators))
-
-    for trial_number in range(n_trials):
-        print(f"Trial Number: {trial_number}")
-        for condition_dict in tqdm(iterate_over_ranges(condition_ranges), desc="Conditions", total=prod(len(v) for v in condition_ranges.values())):
-
-            # Get the graph and the nodes for testing
-            input_data_dict = get_input_data(**condition_dict)
-
-            # Create a configuration object
-            config = Config(**condition_dict, **input_data_dict)
-
+        for nodes in all_nodes:
+            config.nodes = nodes
             if config.experiment_type == "Single":
-                config.source, config.target = config.nodes
+                config.source, config.target = nodes
             elif config.experiment_type == "Sets":
-                config.S, config.T = config.nodes
+                config.S, config.T = nodes
             elif config.experiment_type == "Multiple Pairs":
-                config.pairs = config.nodes
+                config.pairs = nodes
 
-            config_iter = tqdm(iterate_over_ranges(configuration_ranges), desc="Configurations", total=prod(len(v) for v in configuration_ranges.values()), position=1, leave=False)
-            for config_dict in config_iter:
+            for config_dict in iterate_over_ranges(configuration_ranges):
                 # For each possible configuration, update the config object and run the experiment
                 config.update(config_dict)
-                
-                for path_selector_class in path_selector_classes[config.experiment_type]:
-                    config.path_selector = path_selector_class(config)
-                    config.perturber = perturber_classes[config.perturber_class](config)
+                for trial_index in range(config.n_trials):
+                    if sum(process.is_alive() for process in processes)>n_processes or (len(processes) == total_experiments and len(results) < total_experiments):
+                        results.append(queue.get())
+    
+                        pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                        
+                        pbar.update(1)
 
-                    result_dict = run_experiment(config)
-
-                    results.append({
-                        "Trial Number": trial_number,
-                        "Nodes": config.nodes,
-                        "Selector": config.path_selector.name,
-                        "Perturber": config.perturber.name,
-                        **condition_dict,
-                        **config_dict,
-                        **result_dict
-                    })
-
-                    pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                    process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue))
+                    processes.append(process)
+                    process.start()

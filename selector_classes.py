@@ -25,6 +25,7 @@ class SinglePairPathSelector(PathSelector):
 
     def __init__(self, c):
         self.c = c
+        self.goal = c.k*self.distance(c.G)+c.epsilon
     
     def get_next(self, state):
         if self.c.top_k == 1:
@@ -82,32 +83,30 @@ class MultiPairPathSelector(PathSelector):
                 c_copy.source = source
                 c_copy.target = target
                 c_copy.top_k = 1
+                c_copy.goal = c_copy.k*nx.shortest_path_length(c.G, source, target, weight="weight")+c_copy.epsilon
                 self.path_selectors.append(path_selector_func(c_copy, **selector_func_kwargs))
                 self.path_selectors[-1].name = f"{self.name}: from {source} to {target}"
         else:
             self.path_selectors = path_selectors
+        
+        self.goal = 0
+        self.c.top_k *= len(c.pairs)
 
     def combine_generators(self, state):  
         # Combine the generators of the per-pair selectors into a single generator
         i = 0
         generators = self.path_selectors.copy()
         while generators:
-            next_paths = self.path_selectors[i].get_next(state)
+            next_paths = [path for path in self.path_selectors[i].get_next(state) if nx.path_weight(state.G_prime) <= self.c.goal]
             if next_paths:
                 yield next_paths
             else:
                 generators.pop(i)
             i = (i + 1) % len(generators)
-    
-    def update_graph(self, new_graph):
-        # Update the graph of each per-pair selector
-        for selector in self.path_selectors:
-            selector.update_graph(new_graph)
-        self.generator = self.combine_generators(self.path_selectors)
 
     def distance(self, G):
         # Return the minimum distance of the per-pair selectors, equal to the distance between the sets
-        return min([selector.distance(G) for selector in self.path_selectors])
+        return max([selector.c.goal - selector.distance(G) for selector in self.path_selectors])
 
     def get_next(self, state):
         generator = self.combine_generators(state)
