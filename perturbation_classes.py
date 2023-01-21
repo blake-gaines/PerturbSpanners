@@ -29,7 +29,7 @@ class PathAttack:
             for edge in new_edges:
                 self.d[edge] = self.model.addVar(vtype=GRB.CONTINUOUS, lb=0)
                 self.edge_upper_bounds[edge] = self.model.addConstr(self.d[edge] <= self.c.local_budget)
-            self.path_constraints[path] = self.model.addConstr(gp.quicksum((self.c.G.edges[a, b]["weight"]+self.d[(a,b)]) for a,b in zip(path[:-1], path[1:])) >= self.c.goal)
+            self.path_constraints[path] = self.model.addConstr(gp.quicksum((self.c.G.edges[a, b]["weight"]+self.d[(a,b)]) for a,b in zip(path[:-1], path[1:])) >= self.c.path_selector.goal)
         total_perturbations = gp.quicksum(self.d.values())
         self.global_budget_constraint = self.model.addConstr(total_perturbations <= self.c.global_budget, name="global_budget") 
         self.model.setObjective(total_perturbations, sense=GRB.MINIMIZE) 
@@ -72,8 +72,8 @@ class Greedy:
     def add_paths(self, paths):
         for path in paths:
             path_length = nx.path_weight(self.G, path, "weight")
-            if path_length < self.c.goal:
-                needed_perturbation = self.c.goal - path_length
+            if path_length < self.c.path_selector.goal:
+                needed_perturbation = self.c.path_selector.goal - path_length
                 # if needed_perturbation > self.c.local_budget or self.current_cost + needed_perturbation > self.c.global_budget:
                 #     self.constraints_violated = True
                 chosen_edge = self.choose_edge(path)

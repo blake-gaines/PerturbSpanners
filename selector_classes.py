@@ -96,17 +96,21 @@ class MultiPairPathSelector(PathSelector):
         # Combine the generators of the per-pair selectors into a single generator
         i = 0
         generators = self.path_selectors.copy()
-        while generators:
-            next_paths = [path for path in self.path_selectors[i].get_next(state) if nx.path_weight(state.G_prime) <= self.c.goal]
+        while len(generators)>0:
+            i = i % len(generators)
+            next_paths = self.path_selectors[i].get_next(state)
+            # print("Next", next_paths)
+            # print("Weights", [nx.path_weight(state.G_prime, path, weight="weight") for path in next_paths])
+            next_paths = [path for path in next_paths if nx.path_weight(state.G_prime, path, weight="weight") <= self.path_selectors[i].goal]
             if next_paths:
                 yield next_paths
+                i = i + 1
             else:
                 generators.pop(i)
-            i = (i + 1) % len(generators)
 
     def distance(self, G):
         # Return the minimum distance of the per-pair selectors, equal to the distance between the sets
-        return max([selector.c.goal - selector.distance(G) for selector in self.path_selectors])
+        return min([path_selector.distance(G) - path_selector.goal for path_selector in self.path_selectors])
 
     def get_next(self, state):
         generator = self.combine_generators(state)

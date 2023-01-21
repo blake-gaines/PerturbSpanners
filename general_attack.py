@@ -25,6 +25,8 @@ def attack(c):
         current_distance = c.path_selector.distance(G),
     )
 
+    perturbation_result = dict()
+
     status= "Fail: Unknown"
     for i in range(c.max_iterations):
         # Add Paths
@@ -35,6 +37,7 @@ def attack(c):
         # Update State
         if not new_paths:
             status = "Fail: No Paths Returned By Selector"
+            # print("oof", new_paths)
             break
         else:
             state.paths.update(new_paths)
@@ -45,6 +48,7 @@ def attack(c):
         perturb_start_time = time.time()
         c.perturber.add_paths(new_paths)
         perturbation_result = c.perturber.perturb()
+        # print(perturbation_result, type(perturbation_result))
         perturb_times.append(time.time() - perturb_start_time)
 
         if perturbation_result["Perturbation Failure"]:
@@ -61,7 +65,7 @@ def attack(c):
 
         # Check if we are done
         state.current_distance = c.path_selector.distance(G_prime)
-        if state.current_distance >= c.goal:
+        if state.current_distance >= c.path_selector.goal:
             status = "Success"
             break
 

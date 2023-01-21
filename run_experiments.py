@@ -44,22 +44,19 @@ def run_experiment(config_dict, G_dict, queue=None):
 
     config.G = G_dict["G"].copy()
 
-    config.path_selector = path_selector_classes[config.path_selector_class](config)
+    config.path_selector = path_selector_classes[config.experiment_type](config)
     config.perturber = perturber_classes[config.perturber_class](config)
-
-    config.goal = config.path_selector.goal
 
     start_time = time.time()
     stats_dict = attack(config)
     time_taken = time.time() - start_time
 
     original_distance = config.path_selector.distance(config.G)
-    config.goal = original_distance * config.k + config.epsilon
 
     result_dict = {
         "Original Distance": original_distance,
         "Time Taken": time_taken,
-        "Success": stats_dict["Final Distance"] >= config.goal,
+        "Success": stats_dict["Final Distance"] >= config.path_selector.goal,
         **stats_dict,
         **{k:v for k,v in config.__dict__.items() if k not in ["G", "path_selector", "perturber"]},
     }
@@ -98,7 +95,11 @@ if __name__ == "__main__":
             elif config.experiment_type == "Sets":
                 config.S, config.T = nodes
             elif config.experiment_type == "Multiple Pairs":
+                # print("hm")
                 config.pairs = nodes
+
+            # print("HMMM", config.experiment_type, len(config.experiment_type))
+            # print("AHHHHHHH", config.pairs)
 
             for config_dict in iterate_over_ranges(configuration_ranges):
                 # For each possible configuration, update the config object and run the experiment
@@ -114,3 +115,4 @@ if __name__ == "__main__":
                     process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue))
                     processes.append(process)
                     process.start()
+                    # process.join() ## REMOVE

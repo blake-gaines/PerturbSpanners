@@ -131,11 +131,15 @@ def get_nodes(G, config):
     elif config.experiment_type == "Multiple Pairs":
         experiments = set()
         while len(experiments) < config.n_experiments:
-            experiment = []
-            while len(experiment) < config.num_nodes // 2:
+            experiment = set()
+            while len(experiment) < config.n_nodes_per_experiment // 2:
                 a,b = random.choices(nodes,k=2)
                 if nx.has_path(G, a, b) and nx.shortest_path_length(G, a, b, weight="weight") > config.min_path_length:
-                    nodes.add((a,b))
+                    experiment.add((a,b))
+            experiments.add(tuple(experiment))
+    else:
+        print(config.experiment_type)
+        raise NotImplementedError
 
     return experiments
 
