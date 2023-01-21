@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1                  
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:0
 #SBATCH --error=output.log
 #SBATCH --output=output.log

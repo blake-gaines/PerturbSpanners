@@ -58,16 +58,19 @@ def attack(c):
         state.perturbation_dict = perturbation_result["Perturbation Dict"]
 
         # Create Perturbed Graph TODO: make this more efficient
-        G_prime = G.copy()
+        # G_prime = G.copy()
         for edge, perturbation in state.perturbation_dict.items():
-            G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
-        state.G_prime = G_prime
+            state.G_prime.edges[edge[0], edge[1]]["weight"] += perturbation
+        # state.G_prime = G_prime
 
         # Check if we are done
-        state.current_distance = c.path_selector.distance(G_prime)
+        state.current_distance = c.path_selector.distance(state.G_prime)
         if state.current_distance >= c.path_selector.goal:
             status = "Success"
             break
+
+        for edge, perturbation in state.perturbation_dict.items():
+            state.G_prime.edges[edge[0], edge[1]]["weight"] -= perturbation
 
     if status != "Success" and c.max_iterations == i+1:
         status = "Fail: Max Iterations"

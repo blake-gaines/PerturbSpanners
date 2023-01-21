@@ -4,7 +4,7 @@ from math import prod
 
 # Which selectors to test
 path_selector_classes = {
-    # "Single": SinglePairPathSelector,
+    "Single": SinglePairPathSelector,
     # "Sets": SetsPathSelector,
     "Multiple Pairs": MultiPairPathSelector,
 }
