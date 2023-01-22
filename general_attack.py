@@ -23,7 +23,6 @@ def attack(c, solver_lock=None):
         perturbation_dict=dict(),
         paths = set(),
         all_path_edges = set(),
-        current_distance = c.path_selector.distance(G),
     )
 
     perturbation_result = dict()
@@ -41,7 +40,7 @@ def attack(c, solver_lock=None):
             status = "Fail: No Paths Returned By Selector"
             break
         else:
-            state.paths.update(set(new_path[0] for new_path, _ in new_paths))
+            state.paths.update(set(new_path for new_path, _ in new_paths))
             for new_path, _ in new_paths: 
                 state.all_path_edges.update(zip(new_path[:-1], new_path[1:]))
 
@@ -85,7 +84,7 @@ def attack(c, solver_lock=None):
         "Add Times": add_times,
         "Perturb Times": perturb_times,
         "Iterations": i+1,
-        "Final Distance": state.current_distance,
+        "Final Distance": c.path_selector.distance(state.G_prime),
         "Status": status,
         **perturbation_result
     }

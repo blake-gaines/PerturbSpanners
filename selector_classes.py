@@ -39,7 +39,7 @@ class SinglePairPathSelector(PathSelector):
 
     def check_if_done(self, state):
         current_distance = self.distance(state.G_prime)
-        return current_distance >= self.goal or isclose(state.current_distance, self.goal)
+        return current_distance >= self.goal or isclose(current_distance, self.goal)
 
     def distance(self, G):
         return nx.shortest_path_length(G, self.c.source, self.c.target, weight="weight")
