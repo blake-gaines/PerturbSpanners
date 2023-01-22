@@ -40,6 +40,7 @@ condition_ranges = dict(
     min_path_length = [5],
 )
 
+use_multithreading = False
 n_processes = 16
 
 total_experiments = prod(len(v) for v in configuration_ranges.values()) * prod(len(v) for v in condition_ranges.values()) * condition_ranges["n_trials"][0]

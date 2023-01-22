@@ -38,11 +38,14 @@ def iterate_over_ranges(d):
         kv_iterators.append([(key, value) for value in values])
     return map(dict, product(*kv_iterators))
 
-def run_experiment(config_dict, G_dict, queue=None):
+def run_experiment(config_dict, G, queue=None):
     # Given a configuration, run the experiment and return the results
     config = Config(config_dict)
 
-    config.G = G_dict["G"].copy()
+    if use_multithreading:
+        config.G = G["G"].copy()
+    else:
+        config.G = G
 
     config.path_selector = path_selector_classes[config.experiment_type](config)
     config.perturber = perturber_classes[config.perturber_class](config)
@@ -74,8 +77,9 @@ if __name__ == "__main__":
 
     results = []
 
-    processes = []
-    queue = Queue(maxsize=n_processes)
+    if use_multithreading:
+        processes = []
+        queue = Queue(maxsize=n_processes)
 
     pbar = tqdm("Progress", total=total_experiments)
 
@@ -85,8 +89,10 @@ if __name__ == "__main__":
         # Get the graph and the nodes for testing
         G = get_graph(config)
         all_nodes = get_nodes(G, config)
-        manager = Manager()
-        G_dict = manager.dict({"G": G})
+
+        if use_multithreading: 
+            manager = Manager()
+            G_dict = manager.dict({"G": G})
 
         for nodes in all_nodes:
             config.nodes = nodes
@@ -105,14 +111,18 @@ if __name__ == "__main__":
                 # For each possible configuration, update the config object and run the experiment
                 config.update(config_dict)
                 for trial_index in range(config.n_trials):
-                    if sum(process.is_alive() for process in processes)>n_processes or (len(processes) == total_experiments and len(results) < total_experiments):
-                        results.append(queue.get(timeout=600))
-    
-                        pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
-                        
-                        pbar.update(1)
+                    if use_multithreading: # This is a temporary fix, Gurobi has a problem with multithreading
+                        if sum(process.is_alive() for process in processes)>n_processes or (len(processes) == total_experiments and len(results) < total_experiments):
+                            results.append(queue.get(timeout=600))
 
-                    process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue))
-                    processes.append(process)
-                    process.start()
+                            pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                            
+                            pbar.update(1)
+
+                        process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue))
+                        processes.append(process)
+                        process.start()
+                    else:
+                        results.append(run_experiment(config.__dict__.copy(), G))
+                        pbar.update(1)
                     # process.join() ## REMOVE
