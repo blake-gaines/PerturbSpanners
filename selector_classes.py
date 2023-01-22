@@ -2,6 +2,7 @@ import networkx as nx
 import itertools
 from utils import *
 import copy
+from math import isclose, ceil
 
 class PathSelector:
     # General Path Selector class
@@ -19,6 +20,9 @@ class PathSelector:
     def get_next(self, state):
         raise NotImplementedError
 
+    def check_if_done(self, state):
+        raise NotImplementedError
+
 class SinglePairPathSelector(PathSelector):
     # Path selector for single pairs of nodes, by default equivalent to PATHATTACK
     name = "Shortest Path Selector"
@@ -29,9 +33,13 @@ class SinglePairPathSelector(PathSelector):
     
     def get_next(self, state):
         if self.c.top_k == 1:
-            return [tuple(nx.shortest_path(state.G_prime, self.c.source, self.c.target, weight="weight"))]
+            return [(tuple(nx.shortest_path(state.G_prime, self.c.source, self.c.target, weight="weight")), self.goal)]
         else:
-            return list(map(tuple, itertools.islice(nx.shortest_simple_paths(state.G_prime, self.c.source, self.c.target, weight="weight"), self.c.top_k)))
+            return [(tuple(path), self.goal) for path in itertools.islice(nx.shortest_simple_paths(state.G_prime, self.c.source, self.c.target, weight="weight"), self.c.top_k)]
+
+    def check_if_done(self, state):
+        current_distance = self.distance(state.G_prime)
+        return current_distance >= self.goal or isclose(state.current_distance, self.goal)
 
     def distance(self, G):
         return nx.shortest_path_length(G, self.c.source, self.c.target, weight="weight")
@@ -62,7 +70,7 @@ class SetsPathSelector(SinglePairPathSelector):
 
     def get_next(self, state):
         # Trim the ghost nodes from the paths
-        return [path[1:-1] for path in super().get_next(state)]
+        return [(path[1:-1], goal) for path, goal in super().get_next(state)]
 
 class MultiPairPathSelector(PathSelector):
     # Path selector for multiple pairs of nodes, cycles through per-pair selectors
@@ -82,8 +90,7 @@ class MultiPairPathSelector(PathSelector):
                 c_copy = copy.copy(c)
                 c_copy.source = source
                 c_copy.target = target
-                c_copy.top_k = 1
-                c_copy.goal = c_copy.k*nx.shortest_path_length(c.G, source, target, weight="weight")+c_copy.epsilon
+                c_copy.top_k = ceil(c.top_k/len(c.pairs))
                 self.path_selectors.append(path_selector_func(c_copy, **selector_func_kwargs))
                 self.path_selectors[-1].name = f"{self.name}: from {source} to {target}"
         else:
@@ -101,7 +108,7 @@ class MultiPairPathSelector(PathSelector):
             next_paths = self.path_selectors[i].get_next(state)
             # print("Next", next_paths)
             # print("Weights", [nx.path_weight(state.G_prime, path, weight="weight") for path in next_paths])
-            next_paths = [path for path in next_paths if nx.path_weight(state.G_prime, path, weight="weight") <= self.path_selectors[i].goal]
+            next_paths = [path for path in next_paths if nx.path_weight(state.G_prime, path["path"], weight="weight") <= self.path_selectors[i].goal]
             if next_paths:
                 yield next_paths
                 i = i + 1
@@ -110,11 +117,16 @@ class MultiPairPathSelector(PathSelector):
 
     def distance(self, G):
         # Return the minimum distance of the per-pair selectors, equal to the distance between the sets
-        return min([path_selector.distance(G) - path_selector.goal for path_selector in self.path_selectors])
+        return min([path_selector.distance(G) for path_selector in self.path_selectors])
+
+    def check_if_done(self, state):
+        return all([path_selector.check_if_done(state) for path_selector in self.path_selectors])
 
     def get_next(self, state):
-        generator = self.combine_generators(state)
-        return list((tuple(path) for path_set in itertools.islice(generator, self.c.top_k) for path in path_set)) # TODO: Fix
+        next_paths = [selector.get_next(state)[0] for selector in self.path_selectors if not selector.check_if_done(state)]
+        return next_paths
+        # generator = self.combine_generators(state)
+        # return list((tuple(path) for path_set in itertools.islice(generator, self.c.top_k) for path in path_set)) # TODO: Fix
 
 ##################################
 

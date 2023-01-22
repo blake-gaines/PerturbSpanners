@@ -8,7 +8,8 @@ from tqdm import tqdm
 from math import prod
 from numpy import random as rand
 from settings import *
-from multiprocessing import Process, Manager, Queue, active_children
+from multiprocessing import Process, Manager, Queue, Lock, active_children
+from time import sleep
 
 ## TODO: Get slack for the final system
 ## TODO: Get list of distances during experiment
@@ -38,12 +39,13 @@ def iterate_over_ranges(d):
         kv_iterators.append([(key, value) for value in values])
     return map(dict, product(*kv_iterators))
 
-def run_experiment(config_dict, G, queue=None):
+def run_experiment(config_dict, G, queue=None, solver_lock=None):
+    sleep(random.random()*5)
     # Given a configuration, run the experiment and return the results
     config = Config(config_dict)
 
     if use_multithreading:
-        config.G = G["G"].copy()
+        config.G = G[(config.graph_name, config.weights)].copy()
     else:
         config.G = G
 
@@ -51,7 +53,7 @@ def run_experiment(config_dict, G, queue=None):
     config.perturber = perturber_classes[config.perturber_class](config)
 
     start_time = time.time()
-    stats_dict = attack(config)
+    stats_dict = attack(config, solver_lock)
     time_taken = time.time() - start_time
 
     original_distance = config.path_selector.distance(config.G)
@@ -59,7 +61,7 @@ def run_experiment(config_dict, G, queue=None):
     result_dict = {
         "Original Distance": original_distance,
         "Time Taken": time_taken,
-        "Success": stats_dict["Final Distance"] >= config.path_selector.goal,
+        "Success": stats_dict["Status"] == "Success",
         **stats_dict,
         **{k:v for k,v in config.__dict__.items() if k not in ["G", "path_selector", "perturber"]},
     }
@@ -80,19 +82,24 @@ if __name__ == "__main__":
     if use_multithreading:
         processes = []
         queue = Queue(maxsize=n_processes)
+        solver_lock = Lock()
+        manager = Manager()
+        G_dict = manager.dict()
 
     pbar = tqdm("Progress", total=total_experiments)
 
-    for condition_dict in iterate_over_ranges(condition_ranges):
+    for condition_index, condition_dict in enumerate(iterate_over_ranges(condition_ranges)):
         config = Config(condition_dict)
+        config.condition_index = condition_index
+        config.use_multithreading = use_multithreading
 
         # Get the graph and the nodes for testing
         G = get_graph(config)
         all_nodes = get_nodes(G, config)
 
         if use_multithreading: 
-            manager = Manager()
-            G_dict = manager.dict({"G": G})
+            G_dict[(config.graph_name, config.weights)] = G
+            
 
         for nodes in all_nodes:
             config.nodes = nodes
@@ -101,28 +108,39 @@ if __name__ == "__main__":
             elif config.experiment_type == "Sets":
                 config.S, config.T = nodes
             elif config.experiment_type == "Multiple Pairs":
-                # print("hm")
                 config.pairs = nodes
 
-            # print("HMMM", config.experiment_type, len(config.experiment_type))
-            # print("AHHHHHHH", config.pairs)
-
-            for config_dict in iterate_over_ranges(configuration_ranges):
+            for configuration_index, config_dict in enumerate(iterate_over_ranges(configuration_ranges)):
                 # For each possible configuration, update the config object and run the experiment
+                config.configuration_index = configuration_index
                 config.update(config_dict)
-                for trial_index in range(config.n_trials):
-                    if use_multithreading: # This is a temporary fix, Gurobi has a problem with multithreading
-                        if sum(process.is_alive() for process in processes)>n_processes or (len(processes) == total_experiments and len(results) < total_experiments):
-                            results.append(queue.get(timeout=600))
+                for _ in range(config.n_trials):
+                    if use_multithreading:
 
-                            pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
-                            
-                            pbar.update(1)
-
-                        process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue))
-                        processes.append(process)
+                        process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue, solver_lock))
+                        processes.append({"Process": process, "Config": config.__dict__.copy()})
                         process.start()
+
+                        while len(active_children()) >= n_processes:
+                            results.append(queue.get())
+                            pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                            pbar.update(1)
                     else:
                         results.append(run_experiment(config.__dict__.copy(), G))
+                        pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
                         pbar.update(1)
-                    # process.join() ## REMOVE
+
+    while len(results) < total_experiments:
+        results.append(queue.get())
+        pbar.update(1)
+    pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+
+    sleep(5)
+     
+    failed = []
+    for process in processes:
+        assert not process["Process"].is_alive()
+        if process["Process"].exitcode != 0:
+            process["Config"]["Exit Code"] = process["Process"].exitcode
+            failed.append(process["Config"])
+    pd.DataFrame.from_records(failed).to_pickle(f"failed_experiments.pkl")

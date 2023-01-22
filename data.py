@@ -104,7 +104,7 @@ def add_weights(G, weights):
     
     if weights == 'Poisson':
         # draw weights from a Poisson distribution
-        w = 1+rand.poisson(20, (nWeights))
+        w = 1+rand.poisson(2, (nWeights))
     elif weights == 'Uniform':
         # draw weights from a uniform distribution
         w = 1+rand.randint(41, size=(nWeights))
@@ -137,6 +137,15 @@ def get_nodes(G, config):
                 if nx.has_path(G, a, b) and nx.shortest_path_length(G, a, b, weight="weight") > config.min_path_length:
                     experiment.add((a,b))
             experiments.add(tuple(experiment))
+    elif config.experiment_type == "Sets":
+        experiments = set()
+        while len(experiments) < config.n_experiments:
+            S, T = [], []
+            while len(S) < config.n_nodes_per_experiment // 2:
+                a,b = random.choices(nodes,k=2)
+                if nx.has_path(G, a, b) and nx.shortest_path_length(G, a, b, weight="weight") > config.min_path_length:
+                    S.append(a), T.append(b)
+            experiments.add((tuple(S),tuple(T)))
     else:
         print(config.experiment_type)
         raise NotImplementedError

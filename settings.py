@@ -12,7 +12,7 @@ path_selector_classes = {
 # Which perturbers to test
 perturber_classes = {
     "PathAttack": PathAttack,
-    "GreeedyFirst": GreedyFirst,
+    "GreedyFirst": GreedyFirst,
     "MinFirst": GreedyMin,
 }
 
@@ -32,15 +32,15 @@ configuration_ranges = dict(
 condition_ranges = dict(
     # graph_name = ["Facebook", "er", "ba", "ws"],
     graph_name = ["Facebook"],
-    weights = ['Poisson', 'Uniform', 'Equal'],
+    weights = ['Equal', 'Uniform', 'Poisson'],
     experiment_type = list(path_selector_classes.keys()),
-    n_nodes_per_experiment = [10, 100],
+    n_nodes_per_experiment = [10],
     n_experiments = [20],
     n_trials = [5],
     min_path_length = [5],
 )
 
-use_multithreading = False
-n_processes = 16
+use_multithreading = True
+n_processes = 8
 
-total_experiments = prod(len(v) for v in configuration_ranges.values()) * prod(len(v) for v in condition_ranges.values()) * condition_ranges["n_trials"][0]
+total_experiments = prod(len(v) for v in configuration_ranges.values()) * prod(len(v) for v in condition_ranges.values()) * condition_ranges["n_trials"][0] * condition_ranges["n_experiments"][0]
