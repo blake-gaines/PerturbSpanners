@@ -41,6 +41,6 @@ condition_ranges = dict(
 )
 
 use_multithreading = True
-n_processes = 8
+n_processes = 7
 
 total_experiments = prod(len(v) for v in configuration_ranges.values()) * prod(len(v) for v in condition_ranges.values()) * condition_ranges["n_trials"][0] * condition_ranges["n_experiments"][0]

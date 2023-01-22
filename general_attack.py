@@ -47,13 +47,13 @@ def attack(c, solver_lock=None):
 
         # Perturb Graph
         c.perturber.add_paths(new_paths)
-        if c.use_multithreading: 
-            solver_lock.acquire()
+        # if c.use_multithreading: 
+        #     solver_lock.acquire()
         perturb_start_time = time.time()
         perturbation_result = c.perturber.perturb()
         perturb_times.append(time.time() - perturb_start_time)
-        if c.use_multithreading: 
-            solver_lock.release()
+        # if c.use_multithreading: 
+        #     solver_lock.release()
 
         if perturbation_result["Perturbation Failure"]:
             status = "Fail: Failure in Perturber"
