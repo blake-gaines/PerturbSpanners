@@ -11,9 +11,8 @@ from settings import *
 from multiprocessing import Process, Manager, Queue, Lock, active_children
 from time import sleep
 
-## TODO: Get slack for the final system
-## TODO: Get list of distances during experiment
 ## TODO: Fix data.py
+## TODO: Fix case for undirected graphs
 
 class Config:
     # Object to hold all the configuration information for an experiment
@@ -125,11 +124,6 @@ if __name__ == "__main__":
                             pd.DataFrame.from_records(results).to_pickle(output_path)
                             pbar.update(1)
                     else:
-                        # if pbar.n == 108:
-                        #     print(config)
-                        # if pbar.n < 10:
-                        #     pbar.update(1)
-                        #     continue
                         results.append(run_experiment(config.__dict__.copy(), G))
                         pd.DataFrame.from_records(results).to_pickle(output_path)
                         pbar.update(1)
