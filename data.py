@@ -58,9 +58,7 @@ class DataSets:
         df = pd.read_csv(path, sep=separator, header=None, comment='#')
         return df
 
-
-# from algorithms import *
-
+# From https://github.com/bamille1/PATHATTACK/blob/main/data.py
 # add_weights: add weights to an unweighted networkx graph via a specified method
 #    Inputs:    G - an unweighted, undirected networkx graph
 #               weights - a string denoting the distribution from which to
@@ -138,6 +136,12 @@ def get_graph(config):
         G = DataSets.get_directed_networkx_graph(dataset=DataSets.FACEBOOK, lcc=False)
     elif config.graph_name == 'RoadNet':
         G = DataSets.get_directed_networkx_graph(dataset=DataSets.ROADNET, lcc=False)
+    elif config.graph_name == 'er':
+        G = nx.erdos_renyi_graph(10000, .001, directed=True)
+    elif config.graph_name == 'ba':
+        G = nx.barabasi_albert_graph(10000, 5)
+    elif config.graph_name == 'ws':
+        G = nx.watts_strogatz_graph(10000, 10, 0.01)
     else:
         raise ValueError(f"Unknown Graph {config.graph_name}")
     add_weights(G, config.weights)
