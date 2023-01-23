@@ -3,8 +3,7 @@
 
   
 
-Implementation and extension of [PATHPERTURB](https://arxiv.org/pdf/2107.03347.pdf), along with additional experiments
-
+Implementation and extension of [PATHPERTURB](https://arxiv.org/pdf/2107.03347.pdf), but with a slightly modified goal. Given a weighted graph and a set of pairs of nodes within that graph, this code is able to find the minimum weight added to each edge that will increase the pariwise distances between those nodes to prespecified target distances.
   
 
 The main algorithm is contained in [general_attack.py](./general_attack.py)
