@@ -33,6 +33,7 @@ configuration_ranges = dict(
 condition_ranges = dict(
     # graph_name = ["Facebook", "er", "ba", "ws"],
     graph_name = ["Facebook"],
+    # graph_name = ["RoadNet"],
     weights = ['Uniform', 'Poisson', 'Equal',],
     experiment_type = list(path_selector_classes.keys()),
     n_nodes_per_experiment = [10],

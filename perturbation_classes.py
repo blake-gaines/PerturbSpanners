@@ -2,7 +2,18 @@ import gurobipy as gp
 from gurobipy import GRB
 import networkx as nx
 
-class PathAttack:
+class Perturber:
+    name = "Perturber"
+    def add_paths(self, paths):
+        return NotImplementedError
+
+    def perturb(self):
+        return NotImplementedError
+
+    def close(self):
+        return
+
+class PathAttack(Perturber):
     name = "PathAttack"
     def __init__(self, config, write_model=False, verbose=False):
         self.write_model = write_model
@@ -15,10 +26,10 @@ class PathAttack:
         self.path_constraints = dict()
         self.edge_upper_bounds = dict()
 
-        env = gp.Env(empty=True)
-        if not self.verbose: env.setParam('OutputFlag', 0)
-        env.start()
-        self.model = gp.Model("Spanner Attack", env=env)
+        self.env = gp.Env(empty=True)
+        if not self.verbose: self.env.setParam('OutputFlag', 0)
+        self.env.start()
+        self.model = gp.Model("Spanner Attack", env=self.env)
 
     def add_paths(self, paths):
         for path, goal in paths:
@@ -64,8 +75,12 @@ class PathAttack:
             result_dict["IIS_global_budget"] = self.global_budget_constraint.IISConstr
             result_dict["Perturbation Failure"] = True
         return result_dict
+    
+    def close(self):
+        self.model.dispose()
+        self.env.dispose()
 
-class Greedy:
+class Greedy(Perturber):
     name = "General Greedy"
     def __init__(self, config):
         self.c = config

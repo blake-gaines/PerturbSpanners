@@ -79,6 +79,8 @@ def attack(c, solver_lock=None):
             status = "Success"
             break
 
+    c.perturber.close()
+
     if status != "Success" and c.max_iterations == i+1:
         status = "Fail: Max Iterations"
 
