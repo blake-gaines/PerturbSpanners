@@ -14,9 +14,6 @@ def attack(c, solver_lock=None):
     perturb_times = []
 
     G = c.G.copy()
-    # TODO: Merge edge perturbations for undirected graphs
-    if type(G) == nx.Graph:
-        G = G.to_directed(as_view=True)
 
     state = State(
         G_prime=G.copy(),
