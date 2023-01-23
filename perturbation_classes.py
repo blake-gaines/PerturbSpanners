@@ -35,7 +35,7 @@ class PathAttack:
             new_edges = set(path_edges).difference(self.all_path_edges)
             self.all_path_edges.update(new_edges)
             for edge in new_edges:
-                self.d[edge] = self.model.addVar(vtype=GRB.INTEGER, lb=0) # TODO: Change to GRB.CONTINUOUS, deal with FP errors
+                self.d[edge] = self.model.addVar(vtype=GRB.CONTINUOUS, lb=0) # TODO: Change to GRB.CONTINUOUS, deal with FP errors
                 self.edge_upper_bounds[edge] = self.model.addConstr(self.d[edge] <= self.c.local_budget)
             self.path_constraints[path] = self.model.addConstr(gp.quicksum((self.c.G.edges[a, b]["weight"]+self.d[(a,b)]) for a,b in zip(path[:-1], path[1:])) >= goal)
         total_perturbations = gp.quicksum(self.d.values())
