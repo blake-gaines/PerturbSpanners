@@ -36,7 +36,7 @@ condition_ranges = dict(
     weights = ['Uniform', 'Poisson', 'Equal',],
     experiment_type = list(path_selector_classes.keys()),
     n_nodes_per_experiment = [10],
-    n_experiments = [20],
+    n_experiments = [50],
     n_trials = [3],
     min_path_length = [5],
 )
