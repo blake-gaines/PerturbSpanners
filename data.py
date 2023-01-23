@@ -104,10 +104,11 @@ def add_weights(G, weights):
     
     if weights == 'Poisson':
         # draw weights from a Poisson distribution
-        w = 1+rand.poisson(2, (nWeights))
+        w = 1+rand.poisson(size=(nWeights))
     elif weights == 'Uniform':
         # draw weights from a uniform distribution
-        w = 1+rand.randint(41, size=(nWeights))
+        # w = 1+rand.randint(41, size=(nWeights))
+        w = 1+rand.uniform(size=(nWeights))
     else:
         # make all weights equal (1)
         w = np.ones((nWeights))
