@@ -28,8 +28,11 @@ def attack(c, solver_lock=None):
     perturbation_result = dict()
 
     status= "Fail: Unknown"
-    for i in range(c.max_iterations):
-        assert all([state.G_prime.edges[pair]["weight"] == G.edges[pair]["weight"]+state.perturbation_dict[pair] for pair in state.perturbation_dict]), [(state.G_prime.edges[pair]["weight"], G.edges[pair]["weight"], state.perturbation_dict[pair]) for pair in state.perturbation_dict]
+    pbar = tqdm(range(c.max_iterations), position=1, leave=False) if not c.use_multithreading else range(c.max_iterations)
+    for i in pbar:
+        if len(state.paths) >= c.max_paths:
+            status = "Fail: Max Paths Reached"
+            break
         # Add Paths
         add_start_time = time.time()
         new_paths = c.path_selector.get_next(state=state)
@@ -40,7 +43,11 @@ def attack(c, solver_lock=None):
             status = "Fail: No Paths Returned By Selector"
             break
         else:
-            state.paths.update(set(new_path for new_path, _ in new_paths))
+            unseen_paths = set(new_path for new_path, _ in new_paths)
+            if not unseen_paths.difference(state.paths):
+                status = "Fail: No New Paths Returned By Selector"
+                break
+            state.paths.update(unseen_paths)
             for new_path, _ in new_paths: 
                 state.all_path_edges.update(zip(new_path[:-1], new_path[1:]))
 
