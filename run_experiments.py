@@ -44,7 +44,7 @@ def run_experiment(config_dict, G, queue=None, solver_lock=None):
     config = Config(config_dict)
 
     if use_multithreading:
-        config.G = G[(config.graph_name, config.weights)].copy()
+        config.G = G[(config.graph_name, config.weights)]
     else:
         config.G = G
 
