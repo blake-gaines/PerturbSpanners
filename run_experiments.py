@@ -116,31 +116,35 @@ if __name__ == "__main__":
                 config.update(config_dict)
                 for _ in range(config.n_trials):
                     if use_multithreading:
-
                         process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue, solver_lock))
                         processes.append({"Process": process, "Config": config.__dict__.copy()})
                         process.start()
 
                         while len(active_children()) >= n_processes:
                             results.append(queue.get())
-                            pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                            pd.DataFrame.from_records(results).to_pickle(output_path)
                             pbar.update(1)
                     else:
+                        # if pbar.n == 108:
+                        #     print(config)
+                        # if pbar.n < 10:
+                        #     pbar.update(1)
+                        #     continue
                         results.append(run_experiment(config.__dict__.copy(), G))
-                        pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
+                        pd.DataFrame.from_records(results).to_pickle(output_path)
                         pbar.update(1)
+    if use_multithreading:
+        while len(results) < total_experiments:
+            results.append(queue.get())
+            pbar.update(1)
+        pd.DataFrame.from_records(results).to_pickle(output_path)
 
-    while len(results) < total_experiments:
-        results.append(queue.get())
-        pbar.update(1)
-    pd.DataFrame.from_records(results).to_pickle(f"results.pkl")
-
-    sleep(5)
-     
-    failed = []
-    for process in processes:
-        assert not process["Process"].is_alive()
-        if process["Process"].exitcode != 0:
-            process["Config"]["Exit Code"] = process["Process"].exitcode
-            failed.append(process["Config"])
-    pd.DataFrame.from_records(failed).to_pickle(f"failed_experiments.pkl")
+        sleep(5)
+        
+        failed = []
+        for process in processes:
+            assert not process["Process"].is_alive()
+            if process["Process"].exitcode != 0:
+                process["Config"]["Exit Code"] = process["Process"].exitcode
+                failed.append(process["Config"])
+        pd.DataFrame.from_records(failed).to_pickle(failed_path)

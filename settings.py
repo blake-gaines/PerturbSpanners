@@ -4,7 +4,7 @@ from math import prod
 
 # Which selectors to test
 path_selector_classes = {
-    "Single": SinglePairPathSelector,
+    # "Single": SinglePairPathSelector,
     # "Sets": SetsPathSelector,
     "Multiple Pairs": MultiPairPathSelector,
 }
@@ -26,21 +26,24 @@ configuration_ranges = dict(
     k = [3,5],
     top_k = [1],
     max_iterations = [200],
+    max_paths = [300]
 )
 
 # Experimental condition ranges
 condition_ranges = dict(
     # graph_name = ["Facebook", "er", "ba", "ws"],
     graph_name = ["Facebook"],
-    weights = ['Equal', 'Uniform', 'Poisson'],
+    weights = ['Uniform', 'Poisson', 'Equal',],
     experiment_type = list(path_selector_classes.keys()),
     n_nodes_per_experiment = [10],
     n_experiments = [20],
-    n_trials = [5],
+    n_trials = [3],
     min_path_length = [5],
 )
 
 use_multithreading = True
-n_processes = 7
+n_processes = 8
+output_path = "Multiple Pairs Results.pkl"
+failed_path = "failed_experiments.pkl"
 
 total_experiments = prod(len(v) for v in configuration_ranges.values()) * prod(len(v) for v in condition_ranges.values()) * condition_ranges["n_trials"][0] * condition_ranges["n_experiments"][0]
