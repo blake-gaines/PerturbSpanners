@@ -4,5 +4,7 @@ data/
 *.pkl
 *.csv
 *.lic
+*.zip
 __pycache__/
 .vscode/
+Results/
