@@ -7,4 +7,4 @@ data/
 *.zip
 __pycache__/
 .vscode/
-Results/
+output.txt
