@@ -32,7 +32,7 @@ configuration_ranges = dict(
 # Experimental condition ranges
 condition_ranges = dict(
     # graph_name = ["Facebook", "er", "ba", "ws"],
-    graph_name = ["Facebook"],
+    graph_name = ["Facebook", "Cora", "Citeseer", "LastFM_Asia", "ca-HepTH"],
     # graph_name = ["RoadNet"],
     weights = ['Uniform', 'Poisson', 'Equal',],
     experiment_type = list(path_selector_classes.keys()),
