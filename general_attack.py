@@ -1,7 +1,5 @@
 from tqdm import tqdm
 import time
-import networkx as nx
-from math import isclose
 
 class State:
     def __init__(self, **kwargs):

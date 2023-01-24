@@ -1,7 +1,5 @@
 import networkx as nx
-import pickle as pkl
 import numpy as np
-import scipy as sp
 import pandas as pd
 from numpy import random as rand
 import random

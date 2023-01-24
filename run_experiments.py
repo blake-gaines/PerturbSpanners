@@ -5,7 +5,6 @@ import random
 from itertools import product
 import pandas as pd
 from tqdm import tqdm
-from math import prod
 from numpy import random as rand
 from settings import *
 from multiprocessing import Process, Manager, Queue, Lock, active_children
