@@ -6,3 +6,4 @@ data/
 *.lic
 __pycache__/
 .vscode/
+output.txt
