@@ -47,7 +47,7 @@ class PathAttack(Perturber):
             self.all_path_edges.update(new_edges)
             for edge in new_edges:
                 self.d[edge] = self.model.addVar(vtype=GRB.CONTINUOUS, lb=0) # TODO: Change to GRB.CONTINUOUS, deal with FP errors
-                self.edge_upper_bounds[edge] = self.model.addConstr(self.d[edge] <= self.c.local_budget)
+                if self.c.local_budget is not None: self.edge_upper_bounds[edge] = self.model.addConstr(self.d[edge] <= self.c.local_budget)
             self.path_constraints[path] = self.model.addConstr(gp.quicksum((self.c.G.edges[a, b]["weight"]+self.d[(a,b)]) for a,b in zip(path[:-1], path[1:])) >= goal)
         total_perturbations = gp.quicksum(self.d.values())
         self.global_budget_constraint = self.model.addConstr(total_perturbations <= self.c.global_budget, name="global_budget") 
@@ -71,7 +71,7 @@ class PathAttack(Perturber):
         elif self.model.status == GRB.INFEASIBLE:
             self.model.computeIIS()
             result_dict["IIS_paths"] = [path for path in self.paths if self.path_constraints[path].IISConstr]
-            result_dict["IIS_edges"] = [edge for edge in self.all_path_edges if self.edge_upper_bounds[edge].IISConstr]
+            if self.c.local_budget is not None: result_dict["IIS_edges"] = [edge for edge in self.all_path_edges if self.edge_upper_bounds[edge].IISConstr]
             result_dict["IIS_global_budget"] = self.global_budget_constraint.IISConstr
             result_dict["Perturbation Failure"] = True
         return result_dict
