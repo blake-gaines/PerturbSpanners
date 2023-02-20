@@ -112,6 +112,7 @@ if __name__ == "__main__":
                 # For each possible configuration, update the config object and run the experiment
                 config.configuration_index = configuration_index
                 config.update(config_dict)
+                print(config)
                 for _ in range(config.n_trials):
                     if use_multithreading:
                         process = Process(target=run_experiment, args=(config.__dict__.copy(), G_dict, queue, solver_lock))

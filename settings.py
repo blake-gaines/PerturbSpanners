@@ -5,15 +5,15 @@ from math import prod
 # Which selectors to test
 path_selector_classes = {
     "Single": SinglePairPathSelector,
-    "Sets": SetsPathSelector,
-    "Multiple Pairs": MultiPairPathSelector,
+    # "Sets": SetsPathSelector,
+    # "Multiple Pairs": MultiPairPathSelector,
 }
 
 # Which perturbers to test
 perturber_classes = {
     "PathAttack": PathAttack,
-    "GreedyFirst": GreedyFirst,
-    "MinFirst": GreedyMin,
+    # "GreedyFirst": GreedyFirst,
+    # "MinFirst": GreedyMin,
 }
 
 # Hyperparameter Ranges
@@ -32,13 +32,14 @@ configuration_ranges = dict(
 # Experimental condition ranges
 condition_ranges = dict(
     # graph_name = ["Facebook", "er", "ba", "ws"],
-    graph_name = ["Facebook", "Cora", "Citeseer", "LastFM_Asia", "ca-HepTH"],
-    # graph_name = ["RoadNet"],
-    weights = ['Uniform', 'Poisson', 'Equal',],
+    # graph_name = ["Facebook", "Cora", "Citeseer", "LastFM_Asia", "ca-HepTH"],
+    graph_name = ["Facebook"],
+    # weights = ['Uniform', 'Poisson', 'Equal',],
+    weights = ['Equal',],
     experiment_type = list(path_selector_classes.keys()),
-    n_nodes_per_experiment = [20],
-    n_experiments = [50],
-    n_trials = [3],
+    n_nodes_per_experiment = [1],
+    n_experiments = [1],
+    n_trials = [1],
     min_path_length = [5],
 )
 
