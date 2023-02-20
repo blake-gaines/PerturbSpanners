@@ -6,7 +6,7 @@ import random
 import os
 
 class DataSets:
-    base_path = os.path.dirname(os.path.realpath(__file__)) + '/'
+    base_path = os.path.dirname(os.path.realpath(__file__)) + '/data/'
 
     # ~ 5K edges 2K nodes
     CORA = {
@@ -58,7 +58,7 @@ class DataSets:
 
     # Nodes: 9,877 Edges: 51,971
     HEPTH = {
-        'path' : 'HepTh/ca-HepTh.txt',
+        'path' : 'ca-HepPh/CA-HepPh.txt',
         'sep' : '\t',
         'name' : 'High Energy Physics - Theory collaboration network',
         'cluster_size' : 4,#-1,
@@ -118,6 +118,20 @@ class DataSets:
         'name' : 'DBLP - Collaboration Network',
         'cluster_size' : -1,
     }
+
+    @classmethod   
+    def get_directed_networkx_graph(cls, dataset, lcc=True):
+        path = cls.base_path + dataset['path']
+        separator = dataset['sep']
+        if (cls.npz_check(dataset)):
+            edgelist = cls.npz_to_df(dataset, ['target', 'source'])
+        else:
+            edgelist = pd.read_csv(path, sep=separator, names=['target', 'source'], comment='#')
+        G = nx.from_pandas_edgelist(edgelist,source='source', target='target', create_using=nx.DiGraph())
+        if lcc == True:
+            gs = [G.subgraph(c) for c in nx.connected_components(G)]
+            G = max(gs, key=len)
+        return G
 
     # returns an networkx graph object representing the dataset
     # if lcc is true, it returns only largest connected component
@@ -249,6 +263,7 @@ def add_weights(G, weights):
 
 def get_nodes(G, config):
     nodes = list(G.nodes())
+    print("Getting")
 
     if len(nodes) > 500000:
         source = random.choice(nodes)
@@ -268,8 +283,11 @@ def get_nodes(G, config):
             experiment = set()
             while len(experiment) < config.n_nodes_per_experiment // 2:
                 a,b = random.choices(nodes,k=2)
+                # print(nx.has_path(G, a, b))
+                # if nx.has_path(G, a, b): print(nx.shortest_path_length(G, a, b, weight="weight"))
                 if nx.has_path(G, a, b) and nx.shortest_path_length(G, a, b, weight="weight") > config.min_path_length:
                     experiment.add((a,b))
+                # print(len(experiment))
             experiments.add(tuple(experiment))
     elif config.experiment_type == "Sets":
         experiments = set()
@@ -279,9 +297,13 @@ def get_nodes(G, config):
                 a,b = random.choices(nodes,k=2)
                 if nx.has_path(G, a, b) and nx.shortest_path_length(G, a, b, weight="weight") > config.min_path_length:
                     S.append(a), T.append(b)
+            # node_choices = random.choices(nodes, k=config.n_nodes_per_experiment)
+            # S,T = node_choices[:config.n_nodes_per_experiment // 2], nodes[config.n_nodes_per_experiment // 2:]
             experiments.add((tuple(S),tuple(T)))
+            # print(len(experiments))
     else:
         print(config.experiment_type)
         raise NotImplementedError
+    print("Got")
 
     return experiments

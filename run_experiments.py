@@ -38,7 +38,6 @@ def iterate_over_ranges(d):
     return map(dict, product(*kv_iterators))
 
 def run_experiment(config_dict, G, queue=None, solver_lock=None):
-    sleep(random.random()*5)
     # Given a configuration, run the experiment and return the results
     config = Config(config_dict)
 
@@ -121,17 +120,16 @@ if __name__ == "__main__":
 
                         while len(active_children()) >= n_processes:
                             results.append(queue.get())
-                            pd.DataFrame.from_records(results).to_pickle(output_path)
+                            # pd.DataFrame.from_records(results).to_pickle(output_path)
                             pbar.update(1)
                     else:
                         results.append(run_experiment(config.__dict__.copy(), G))
-                        pd.DataFrame.from_records(results).to_pickle(output_path)
+                        # pd.DataFrame.from_records(results).to_pickle(output_path)
                         pbar.update(1)
     if use_multithreading:
         while len(results) < total_experiments:
             results.append(queue.get())
             pbar.update(1)
-        pd.DataFrame.from_records(results).to_pickle(output_path)
 
         sleep(5)
         
@@ -142,3 +140,5 @@ if __name__ == "__main__":
                 process["Config"]["Exit Code"] = process["Process"].exitcode
                 failed.append(process["Config"])
         pd.DataFrame.from_records(failed).to_pickle(failed_path)
+
+    pd.DataFrame.from_records(results).to_pickle(output_path)
